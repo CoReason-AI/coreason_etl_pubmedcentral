@@ -38,6 +38,11 @@ def authors_data_path() -> str:
 
 
 @pytest.fixture  # type: ignore
+def authors_edge_cases_path() -> str:
+    return os.path.join(os.path.dirname(__file__), "data", "jats_authors_edge_cases.xml")
+
+
+@pytest.fixture  # type: ignore
 def articles(sample_data_path: str) -> Generator[list[etree._Element], None, None]:
     tree = etree.parse(sample_data_path)
     root = tree.getroot()
@@ -66,6 +71,14 @@ def date_articles(dates_data_path: str) -> Generator[list[etree._Element], None,
 @pytest.fixture  # type: ignore
 def author_articles(authors_data_path: str) -> Generator[list[etree._Element], None, None]:
     tree = etree.parse(authors_data_path)
+    root = tree.getroot()
+    # Find all 'article' elements regardless of namespace
+    yield root.xpath("//*[local-name()='article']")
+
+
+@pytest.fixture  # type: ignore
+def author_edge_case_articles(authors_edge_cases_path: str) -> Generator[list[etree._Element], None, None]:
+    tree = etree.parse(authors_edge_cases_path)
     root = tree.getroot()
     # Find all 'article' elements regardless of namespace
     yield root.xpath("//*[local-name()='article']")
@@ -389,21 +402,67 @@ def test_parse_authors_complex_text(author_articles: list[etree._Element]) -> No
 
     assert len(authors) == 1
     assert authors[0].surname == "Complex"
-    # Text should be concatenated: "1 University of Complex Data , Techland"
-    # Note: _get_full_text joins itertext(), so internal spaces might be preserved or lost depending on XML
-    # In XML: <aff><label>1</label><inst>...</inst>, <country>...</country></aff>
-    # Result: "1University of Complex Data, Techland" or similar.
-    # We should check rough containment or exact string if we know it.
-    # itertext() on:
-    # <aff id="aff_complex">
-    #     <label>1</label>
-    #     <institution>University of Complex Data</institution>, <country>Techland</country>
-    # </aff>
-    # yields "1", "\n    ", "University of Complex Data", ", ", "Techland", "\n"
-    # joined: "1\n    University of Complex Data, Techland\n"
-    # stripped: "1\n    University of Complex Data, Techland"
-    # Wait, itertext returns all text nodes.
-    # Let's adjust expectation or make _get_full_text smarter if needed.
-    # For now, let's just assert one of the key parts exists.
     assert "University of Complex Data" in authors[0].affiliations[0]
     assert "Techland" in authors[0].affiliations[0]
+
+
+def test_parse_authors_multiple_groups(author_edge_case_articles: list[etree._Element]) -> None:
+    # Case 6: Multiple contrib-groups (authors and editors)
+    article = author_edge_case_articles[0]
+    authors = parse_article_authors(article)
+
+    # Logic iterates all contrib-group/contrib, so should get both
+    assert len(authors) == 2
+    names = {a.surname for a in authors}
+    assert "Author" in names
+    assert "Editor" in names
+    assert authors[0].affiliations[0] == "Shared Institute"
+
+
+def test_parse_authors_duplicate_ids(author_edge_case_articles: list[etree._Element]) -> None:
+    # Case 7: Duplicate aff IDs (Last one wins)
+    article = author_edge_case_articles[1]
+    authors = parse_article_authors(article)
+
+    assert len(authors) == 1
+    assert authors[0].surname == "Dupe"
+    # The map logic `aff_map[aff_id] = text` overwrites, so second definition wins
+    assert authors[0].affiliations == ["Second Definition"]
+
+
+def test_parse_authors_unicode(author_edge_case_articles: list[etree._Element]) -> None:
+    # Case 8: Unicode Characters
+    article = author_edge_case_articles[2]
+    authors = parse_article_authors(article)
+
+    assert len(authors) == 1
+    assert authors[0].surname == "Müller"
+    assert authors[0].given_names == "Jürgen"
+    # "Universität Tübingen"
+    # In XML it is encoded as HTML entities or UTF-8. lxml handles decoding.
+    # We check if it contains the correct unicode string.
+    assert "Universität Tübingen" in authors[0].affiliations[0]
+
+
+def test_parse_authors_mixed_rids(author_edge_case_articles: list[etree._Element]) -> None:
+    # Case 9: Mixed Valid/Invalid RIDs
+    article = author_edge_case_articles[3]
+    authors = parse_article_authors(article)
+
+    assert len(authors) == 1
+    # "aff1 invalid_id aff2" -> Should get aff1 and aff2, ignore invalid_id
+    affs = authors[0].affiliations
+    assert len(affs) == 2
+    assert "Affiliation One" in affs
+    assert "Affiliation Two" in affs
+
+
+def test_parse_authors_xref_types(author_edge_case_articles: list[etree._Element]) -> None:
+    # Case 10: Xref missing ref-type or wrong type
+    article = author_edge_case_articles[4]
+    authors = parse_article_authors(article)
+
+    assert len(authors) == 1
+    # Should only pick up the one with ref-type="aff"
+    assert len(authors[0].affiliations) == 1
+    assert authors[0].affiliations[0] == "Correct Affiliation"
