@@ -63,7 +63,11 @@ def _normalize_date_element(date_element: etree._Element) -> Optional[str]:
 
     if raw_month:
         # Pad with zero if needed
-        month = raw_month.zfill(2)
+        if raw_month.isdigit():
+            month = raw_month.zfill(2)
+        else:
+            # Non-numeric month -> strict ISO fail -> default to 01
+            month = "01"
     elif raw_season:
         # Map season to month
         s = raw_season.lower()
@@ -81,7 +85,10 @@ def _normalize_date_element(date_element: etree._Element) -> Optional[str]:
     day = "01"
     raw_day = _get_text(date_element, ".//*[local-name()='day']")
     if raw_day:
-        day = raw_day.zfill(2)
+        if raw_day.isdigit():
+            day = raw_day.zfill(2)
+        else:
+            day = "01"
 
     return f"{year}-{month}-{day}"
 
@@ -102,23 +109,31 @@ def parse_article_dates(article_element: etree._Element) -> ArticleDates:
 
     # We look for all pub-date elements first to minimize xpath calls if possible,
     # but specific xpath is cleaner.
+    # To handle case-insensitivity of @pub-type, we use python logic or complex xpath.
+    # Simple python filtering is safer and readable.
+
+    pub_dates = article_element.xpath(".//*[local-name()='pub-date']")
+
+    # Helper to find date by type (case-insensitive)
+    def find_date_by_type(ptype: str) -> Optional[str]:
+        for node in pub_dates:
+            raw_ptype = node.get("pub-type")
+            if raw_ptype and raw_ptype.lower() == ptype:
+                res = _normalize_date_element(node)
+                if res:
+                    return res
+        return None
 
     # Check epub
-    epub_nodes = article_element.xpath(".//*[local-name()='pub-date'][@pub-type='epub']")
-    if epub_nodes:
-        date_published = _normalize_date_element(epub_nodes[0])
+    date_published = find_date_by_type("epub")
 
     # Check ppub if no epub
     if not date_published:
-        ppub_nodes = article_element.xpath(".//*[local-name()='pub-date'][@pub-type='ppub']")
-        if ppub_nodes:
-            date_published = _normalize_date_element(ppub_nodes[0])
+        date_published = find_date_by_type("ppub")
 
     # Check pmc-release if no epub or ppub
     if not date_published:
-        pmc_nodes = article_element.xpath(".//*[local-name()='pub-date'][@pub-type='pmc-release']")
-        if pmc_nodes:
-            date_published = _normalize_date_element(pmc_nodes[0])
+        date_published = find_date_by_type("pmc-release")
 
     # 2. Date Received
     # Target: //history/date[@date-type='received']

@@ -163,4 +163,75 @@
             </article-meta>
         </front>
     </article>
+
+    <!-- 13. Textual Month (Should default to 01 if not mapped, or we could map it if we want, but currently spec implies 01 if invalid/missing).
+         Actually, let's assume we want valid ISO, so "May" -> "01" if we don't implement English mapping.
+         (Ideally we would map it, but for strict atomic unit, we enforce ISO structure). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <month>May</month>
+                    <year>2027</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 14. Whitespace Handling. -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <year>  2028  </year>
+                    <month>  08  </month>
+                    <day>  15  </day>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 15. Multiple dates of same type (Should pick first). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <year>2029</year>
+                    <month>01</month>
+                    <day>01</day>
+                </pub-date>
+                <pub-date pub-type="epub">
+                    <year>2029</year>
+                    <month>12</month>
+                    <day>31</day>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 16. Case Insensitive pub-type (EPUB). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="EPUB">
+                    <year>2030</year>
+                    <month>01</month>
+                    <day>01</day>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 17. Non-Numeric Day (Should default to 01). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <year>2031</year>
+                    <month>05</month>
+                    <day>15th</day>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
 </root>

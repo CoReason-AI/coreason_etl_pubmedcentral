@@ -279,3 +279,38 @@ def test_parse_dates_unknown_season(date_articles: list[etree._Element]) -> None
     article = date_articles[11]
     dates = parse_article_dates(article)
     assert dates.date_published == "2026-01-01"
+
+
+def test_parse_dates_textual_month(date_articles: list[etree._Element]) -> None:
+    # 13. Textual Month "May" -> "01" (Strict ISO enforcement)
+    article = date_articles[12]
+    dates = parse_article_dates(article)
+    assert dates.date_published == "2027-01-01"
+
+
+def test_parse_dates_whitespace(date_articles: list[etree._Element]) -> None:
+    # 14. Whitespace in fields -> Stripped
+    article = date_articles[13]
+    dates = parse_article_dates(article)
+    assert dates.date_published == "2028-08-15"
+
+
+def test_parse_dates_multiple_same_type(date_articles: list[etree._Element]) -> None:
+    # 15. Multiple epub -> Pick first
+    article = date_articles[14]
+    dates = parse_article_dates(article)
+    assert dates.date_published == "2029-01-01"
+
+
+def test_parse_dates_case_insensitive_type(date_articles: list[etree._Element]) -> None:
+    # 16. pub-type="EPUB" -> Should match
+    article = date_articles[15]
+    dates = parse_article_dates(article)
+    assert dates.date_published == "2030-01-01"
+
+
+def test_parse_dates_non_numeric_day(date_articles: list[etree._Element]) -> None:
+    # 17. Non-numeric day "15th" -> "01" (Strict ISO enforcement)
+    article = date_articles[16]
+    dates = parse_article_dates(article)
+    assert dates.date_published == "2031-05-01"
