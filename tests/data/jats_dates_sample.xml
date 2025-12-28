@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root xmlns:ali="http://www.niso.org/schemas/ali/1.0/" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- 1. Priority: epub > ppub. Full dates. -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="ppub">
+                    <day>01</day>
+                    <month>06</month>
+                    <year>2023</year>
+                </pub-date>
+                <pub-date pub-type="epub">
+                    <day>15</day>
+                    <month>05</month>
+                    <year>2023</year>
+                </pub-date>
+                <history>
+                    <date date-type="received">
+                        <day>10</day>
+                        <month>01</month>
+                        <year>2023</year>
+                    </date>
+                    <date date-type="accepted">
+                        <day>20</day>
+                        <month>04</month>
+                        <year>2023</year>
+                    </date>
+                </history>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 2. Defaults: Year only. -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <year>2023</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 3. Defaults: Year and Month only. -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <month>07</month>
+                    <year>2023</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 4. Season: Spring (03). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="ppub">
+                    <season>Spring</season>
+                    <year>2024</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 5. Season: Winter (12). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="ppub">
+                    <season>Winter</season>
+                    <year>2024</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 6. Priority Fallback: Only ppub. -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="ppub">
+                    <day>25</day>
+                    <month>12</month>
+                    <year>2022</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 7. Priority Fallback: Only pmc-release. -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="pmc-release">
+                    <day>01</day>
+                    <month>01</month>
+                    <year>2021</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 8. Missing Year (Invalid). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <month>05</month>
+                    <day>15</day>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 9. Namespaced article. -->
+    <article xmlns:ns1="http://example.org/ns">
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <ns1:day>05</ns1:day>
+                    <ns1:month>05</ns1:month>
+                    <ns1:year>2025</ns1:year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 10. Unknown Season (Should default to 01 if not matched). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="ppub">
+                    <season>Mid-Summer</season>
+                    <year>2026</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+</root>

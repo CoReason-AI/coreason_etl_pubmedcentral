@@ -14,12 +14,17 @@ from typing import Generator
 import pytest
 from lxml import etree
 
-from coreason_etl_pubmedcentral.parsing.parser import ArticleType, parse_article_identity
+from coreason_etl_pubmedcentral.parsing.parser import ArticleType, parse_article_dates, parse_article_identity
 
 
 @pytest.fixture  # type: ignore
 def sample_data_path() -> str:
     return os.path.join(os.path.dirname(__file__), "data", "jats_identity_sample.xml")
+
+
+@pytest.fixture  # type: ignore
+def dates_data_path() -> str:
+    return os.path.join(os.path.dirname(__file__), "data", "jats_dates_sample.xml")
 
 
 @pytest.fixture  # type: ignore
@@ -37,6 +42,14 @@ def complex_articles() -> Generator[list[etree._Element], None, None]:
     root = tree.getroot()
     # Find all 'article' elements regardless of namespace
     # Using XPath with local-name() is safer here
+    yield root.xpath("//*[local-name()='article']")
+
+
+@pytest.fixture  # type: ignore
+def date_articles(dates_data_path: str) -> Generator[list[etree._Element], None, None]:
+    tree = etree.parse(dates_data_path)
+    root = tree.getroot()
+    # Find all 'article' elements regardless of namespace
     yield root.xpath("//*[local-name()='article']")
 
 
@@ -176,3 +189,79 @@ def test_parse_identity_real_namespace(complex_articles: list[etree._Element]) -
     # This often fails if XPath doesn't handle namespaces or local-name()
     assert identity.pmcid == "66666"
     assert identity.article_type == ArticleType.RESEARCH
+
+
+def test_parse_dates_priority_and_history(date_articles: list[etree._Element]) -> None:
+    # 1. Full Dates & Priority (epub > ppub)
+    article = date_articles[0]
+    dates = parse_article_dates(article)
+
+    # epub is 2023-05-15
+    assert dates.date_published == "2023-05-15"
+    # received: 2023-01-10
+    assert dates.date_received == "2023-01-10"
+    # accepted: 2023-04-20
+    assert dates.date_accepted == "2023-04-20"
+
+
+def test_parse_dates_defaults_year_only(date_articles: list[etree._Element]) -> None:
+    # 2. Year only -> 2023-01-01
+    article = date_articles[1]
+    dates = parse_article_dates(article)
+    assert dates.date_published == "2023-01-01"
+
+
+def test_parse_dates_defaults_year_month_only(date_articles: list[etree._Element]) -> None:
+    # 3. Year and Month only -> 2023-07-01
+    article = date_articles[2]
+    dates = parse_article_dates(article)
+    assert dates.date_published == "2023-07-01"
+
+
+def test_parse_dates_season_spring(date_articles: list[etree._Element]) -> None:
+    # 4. Season: Spring -> 03
+    article = date_articles[3]
+    dates = parse_article_dates(article)
+    assert dates.date_published == "2024-03-01"
+
+
+def test_parse_dates_season_winter(date_articles: list[etree._Element]) -> None:
+    # 5. Season: Winter -> 12
+    article = date_articles[4]
+    dates = parse_article_dates(article)
+    assert dates.date_published == "2024-12-01"
+
+
+def test_parse_dates_fallback_ppub(date_articles: list[etree._Element]) -> None:
+    # 6. Fallback to ppub (no epub)
+    article = date_articles[5]
+    dates = parse_article_dates(article)
+    assert dates.date_published == "2022-12-25"
+
+
+def test_parse_dates_fallback_pmc(date_articles: list[etree._Element]) -> None:
+    # 7. Fallback to pmc-release (no epub, no ppub)
+    article = date_articles[6]
+    dates = parse_article_dates(article)
+    assert dates.date_published == "2021-01-01"
+
+
+def test_parse_dates_missing_year(date_articles: list[etree._Element]) -> None:
+    # 8. Missing Year -> None
+    article = date_articles[7]
+    dates = parse_article_dates(article)
+    assert dates.date_published is None
+
+
+def test_parse_dates_namespace(date_articles: list[etree._Element]) -> None:
+    # 9. Namespaced elements
+    article = date_articles[8]
+    dates = parse_article_dates(article)
+    assert dates.date_published == "2025-05-05"
+
+
+def test_parse_dates_unknown_season(date_articles: list[etree._Element]) -> None:
+    # 10. Unknown Season -> 01
+    article = date_articles[9]
+    dates = parse_article_dates(article)
+    assert dates.date_published == "2026-01-01"
