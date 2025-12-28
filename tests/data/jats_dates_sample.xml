@@ -65,7 +65,31 @@
         </front>
     </article>
 
-    <!-- 5. Season: Winter (12). -->
+    <!-- 5. Season: Summer (06). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="ppub">
+                    <season>Summer</season>
+                    <year>2024</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 6. Season: Fall (09). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="ppub">
+                    <season>Fall</season>
+                    <year>2024</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 7. Season: Winter (12). -->
     <article>
         <front>
             <article-meta>
@@ -77,7 +101,7 @@
         </front>
     </article>
 
-    <!-- 6. Priority Fallback: Only ppub. -->
+    <!-- 8. Priority Fallback: Only ppub. -->
     <article>
         <front>
             <article-meta>
@@ -90,7 +114,7 @@
         </front>
     </article>
 
-    <!-- 7. Priority Fallback: Only pmc-release. -->
+    <!-- 9. Priority Fallback: Only pmc-release. -->
     <article>
         <front>
             <article-meta>
@@ -103,7 +127,7 @@
         </front>
     </article>
 
-    <!-- 8. Missing Year (Invalid). -->
+    <!-- 10. Missing Year (Invalid). -->
     <article>
         <front>
             <article-meta>
@@ -115,7 +139,7 @@
         </front>
     </article>
 
-    <!-- 9. Namespaced article. -->
+    <!-- 11. Namespaced article. -->
     <article xmlns:ns1="http://example.org/ns">
         <front>
             <article-meta>
@@ -128,7 +152,7 @@
         </front>
     </article>
 
-    <!-- 10. Unknown Season (Should default to 01 if not matched). -->
+    <!-- 12. Unknown Season (Should default to 01 if not matched). -->
     <article>
         <front>
             <article-meta>

@@ -225,43 +225,57 @@ def test_parse_dates_season_spring(date_articles: list[etree._Element]) -> None:
     assert dates.date_published == "2024-03-01"
 
 
-def test_parse_dates_season_winter(date_articles: list[etree._Element]) -> None:
-    # 5. Season: Winter -> 12
+def test_parse_dates_season_summer(date_articles: list[etree._Element]) -> None:
+    # 5. Season: Summer -> 06
     article = date_articles[4]
+    dates = parse_article_dates(article)
+    assert dates.date_published == "2024-06-01"
+
+
+def test_parse_dates_season_fall(date_articles: list[etree._Element]) -> None:
+    # 6. Season: Fall -> 09
+    article = date_articles[5]
+    dates = parse_article_dates(article)
+    assert dates.date_published == "2024-09-01"
+
+
+def test_parse_dates_season_winter(date_articles: list[etree._Element]) -> None:
+    # 7. Season: Winter -> 12
+    article = date_articles[6]
     dates = parse_article_dates(article)
     assert dates.date_published == "2024-12-01"
 
 
 def test_parse_dates_fallback_ppub(date_articles: list[etree._Element]) -> None:
-    # 6. Fallback to ppub (no epub)
-    article = date_articles[5]
+    # 8. Fallback to ppub (no epub)
+    article = date_articles[7]
     dates = parse_article_dates(article)
     assert dates.date_published == "2022-12-25"
 
 
 def test_parse_dates_fallback_pmc(date_articles: list[etree._Element]) -> None:
-    # 7. Fallback to pmc-release (no epub, no ppub)
-    article = date_articles[6]
+    # 9. Fallback to pmc-release (no epub, no ppub)
+    article = date_articles[8]
     dates = parse_article_dates(article)
     assert dates.date_published == "2021-01-01"
 
 
 def test_parse_dates_missing_year(date_articles: list[etree._Element]) -> None:
-    # 8. Missing Year -> None
-    article = date_articles[7]
+    # 10. Missing Year -> None
+    article = date_articles[9]
     dates = parse_article_dates(article)
     assert dates.date_published is None
 
 
 def test_parse_dates_namespace(date_articles: list[etree._Element]) -> None:
-    # 9. Namespaced elements
-    article = date_articles[8]
+    # 11. Namespaced elements
+    article = date_articles[10]
     dates = parse_article_dates(article)
     assert dates.date_published == "2025-05-05"
 
 
 def test_parse_dates_unknown_season(date_articles: list[etree._Element]) -> None:
-    # 10. Unknown Season -> 01
-    article = date_articles[9]
+    # 12. Unknown Season -> 01
+    article = date_articles[11]
     dates = parse_article_dates(article)
     assert dates.date_published == "2026-01-01"
