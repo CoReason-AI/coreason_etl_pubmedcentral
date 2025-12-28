@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <!-- Case 1: Simple case, one author, one affiliation -->
+    <article>
+        <front>
+            <article-meta>
+                <contrib-group>
+                    <contrib contrib-type="author">
+                        <name>
+                            <surname>Doe</surname>
+                            <given-names>John</given-names>
+                        </name>
+                        <xref ref-type="aff" rid="aff1"/>
+                    </contrib>
+                </contrib-group>
+                <aff id="aff1">University of Testing</aff>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- Case 2: Multiple authors, shared and unique affiliations -->
+    <article>
+        <front>
+            <article-meta>
+                <contrib-group>
+                    <contrib contrib-type="author">
+                        <name>
+                            <surname>Smith</surname>
+                            <given-names>Alice</given-names>
+                        </name>
+                        <xref ref-type="aff" rid="aff1"/>
+                        <xref ref-type="aff" rid="aff2"/>
+                    </contrib>
+                    <contrib contrib-type="author">
+                        <name>
+                            <surname>Jones</surname>
+                            <given-names>Bob</given-names>
+                        </name>
+                        <xref ref-type="aff" rid="aff2"/>
+                    </contrib>
+                </contrib-group>
+                <aff id="aff1">Institute of Science</aff>
+                <aff id="aff2">Department of Logic</aff>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- Case 3: Author with no affiliation, partial name -->
+    <article>
+        <front>
+            <article-meta>
+                <contrib-group>
+                    <contrib contrib-type="author">
+                        <name>
+                            <surname>Lonely</surname>
+                        </name>
+                    </contrib>
+                </contrib-group>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- Case 4: Broken link (rid does not exist) -->
+    <article>
+        <front>
+            <article-meta>
+                <contrib-group>
+                    <contrib contrib-type="author">
+                        <name>
+                            <surname>Broken</surname>
+                            <given-names>Link</given-names>
+                        </name>
+                        <xref ref-type="aff" rid="aff_missing"/>
+                    </contrib>
+                </contrib-group>
+                <aff id="aff1">Exists</aff>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- Case 5: Complex affiliation text (labels, children) -->
+    <article>
+        <front>
+            <article-meta>
+                <contrib-group>
+                    <contrib contrib-type="author">
+                        <name>
+                            <surname>Complex</surname>
+                            <given-names>Case</given-names>
+                        </name>
+                        <xref ref-type="aff" rid="aff_complex"/>
+                    </contrib>
+                </contrib-group>
+                <aff id="aff_complex">
+                    <label>1</label>
+                    <institution>University of Complex Data</institution>, <country>Techland</country>
+                </aff>
+            </article-meta>
+        </front>
+    </article>
+</root>

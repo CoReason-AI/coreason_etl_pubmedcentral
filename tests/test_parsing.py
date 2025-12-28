@@ -14,7 +14,12 @@ from typing import Generator
 import pytest
 from lxml import etree
 
-from coreason_etl_pubmedcentral.parsing.parser import ArticleType, parse_article_dates, parse_article_identity
+from coreason_etl_pubmedcentral.parsing.parser import (
+    ArticleType,
+    parse_article_authors,
+    parse_article_dates,
+    parse_article_identity,
+)
 
 
 @pytest.fixture  # type: ignore
@@ -25,6 +30,16 @@ def sample_data_path() -> str:
 @pytest.fixture  # type: ignore
 def dates_data_path() -> str:
     return os.path.join(os.path.dirname(__file__), "data", "jats_dates_sample.xml")
+
+
+@pytest.fixture  # type: ignore
+def authors_data_path() -> str:
+    return os.path.join(os.path.dirname(__file__), "data", "jats_authors_sample.xml")
+
+
+@pytest.fixture  # type: ignore
+def authors_edge_cases_path() -> str:
+    return os.path.join(os.path.dirname(__file__), "data", "jats_authors_edge_cases.xml")
 
 
 @pytest.fixture  # type: ignore
@@ -48,6 +63,22 @@ def complex_articles() -> Generator[list[etree._Element], None, None]:
 @pytest.fixture  # type: ignore
 def date_articles(dates_data_path: str) -> Generator[list[etree._Element], None, None]:
     tree = etree.parse(dates_data_path)
+    root = tree.getroot()
+    # Find all 'article' elements regardless of namespace
+    yield root.xpath("//*[local-name()='article']")
+
+
+@pytest.fixture  # type: ignore
+def author_articles(authors_data_path: str) -> Generator[list[etree._Element], None, None]:
+    tree = etree.parse(authors_data_path)
+    root = tree.getroot()
+    # Find all 'article' elements regardless of namespace
+    yield root.xpath("//*[local-name()='article']")
+
+
+@pytest.fixture  # type: ignore
+def author_edge_case_articles(authors_edge_cases_path: str) -> Generator[list[etree._Element], None, None]:
+    tree = etree.parse(authors_edge_cases_path)
     root = tree.getroot()
     # Find all 'article' elements regardless of namespace
     yield root.xpath("//*[local-name()='article']")
@@ -314,3 +345,124 @@ def test_parse_dates_non_numeric_day(date_articles: list[etree._Element]) -> Non
     article = date_articles[16]
     dates = parse_article_dates(article)
     assert dates.date_published == "2031-05-01"
+
+
+def test_parse_authors_simple(author_articles: list[etree._Element]) -> None:
+    # Case 1: Simple case, one author, one affiliation
+    article = author_articles[0]
+    authors = parse_article_authors(article)
+
+    assert len(authors) == 1
+    assert authors[0].surname == "Doe"
+    assert authors[0].given_names == "John"
+    assert authors[0].affiliations == ["University of Testing"]
+
+
+def test_parse_authors_multiple_shared(author_articles: list[etree._Element]) -> None:
+    # Case 2: Multiple authors, shared and unique affiliations
+    article = author_articles[1]
+    authors = parse_article_authors(article)
+
+    assert len(authors) == 2
+    # Smith: aff1, aff2
+    assert authors[0].surname == "Smith"
+    assert authors[0].given_names == "Alice"
+    assert authors[0].affiliations == ["Institute of Science", "Department of Logic"]
+    # Jones: aff2
+    assert authors[1].surname == "Jones"
+    assert authors[1].given_names == "Bob"
+    assert authors[1].affiliations == ["Department of Logic"]
+
+
+def test_parse_authors_none(author_articles: list[etree._Element]) -> None:
+    # Case 3: Author with no affiliation, partial name
+    article = author_articles[2]
+    authors = parse_article_authors(article)
+
+    assert len(authors) == 1
+    assert authors[0].surname == "Lonely"
+    assert authors[0].given_names is None
+    assert authors[0].affiliations == []
+
+
+def test_parse_authors_broken_link(author_articles: list[etree._Element]) -> None:
+    # Case 4: Broken link (rid does not exist)
+    article = author_articles[3]
+    authors = parse_article_authors(article)
+
+    assert len(authors) == 1
+    assert authors[0].surname == "Broken"
+    assert authors[0].affiliations == []  # Should handle missing ID gracefully
+
+
+def test_parse_authors_complex_text(author_articles: list[etree._Element]) -> None:
+    # Case 5: Complex affiliation text
+    article = author_articles[4]
+    authors = parse_article_authors(article)
+
+    assert len(authors) == 1
+    assert authors[0].surname == "Complex"
+    assert "University of Complex Data" in authors[0].affiliations[0]
+    assert "Techland" in authors[0].affiliations[0]
+
+
+def test_parse_authors_multiple_groups(author_edge_case_articles: list[etree._Element]) -> None:
+    # Case 6: Multiple contrib-groups (authors and editors)
+    article = author_edge_case_articles[0]
+    authors = parse_article_authors(article)
+
+    # Logic iterates all contrib-group/contrib, so should get both
+    assert len(authors) == 2
+    names = {a.surname for a in authors}
+    assert "Author" in names
+    assert "Editor" in names
+    assert authors[0].affiliations[0] == "Shared Institute"
+
+
+def test_parse_authors_duplicate_ids(author_edge_case_articles: list[etree._Element]) -> None:
+    # Case 7: Duplicate aff IDs (Last one wins)
+    article = author_edge_case_articles[1]
+    authors = parse_article_authors(article)
+
+    assert len(authors) == 1
+    assert authors[0].surname == "Dupe"
+    # The map logic `aff_map[aff_id] = text` overwrites, so second definition wins
+    assert authors[0].affiliations == ["Second Definition"]
+
+
+def test_parse_authors_unicode(author_edge_case_articles: list[etree._Element]) -> None:
+    # Case 8: Unicode Characters
+    article = author_edge_case_articles[2]
+    authors = parse_article_authors(article)
+
+    assert len(authors) == 1
+    assert authors[0].surname == "Müller"
+    assert authors[0].given_names == "Jürgen"
+    # "Universität Tübingen"
+    # In XML it is encoded as HTML entities or UTF-8. lxml handles decoding.
+    # We check if it contains the correct unicode string.
+    assert "Universität Tübingen" in authors[0].affiliations[0]
+
+
+def test_parse_authors_mixed_rids(author_edge_case_articles: list[etree._Element]) -> None:
+    # Case 9: Mixed Valid/Invalid RIDs
+    article = author_edge_case_articles[3]
+    authors = parse_article_authors(article)
+
+    assert len(authors) == 1
+    # "aff1 invalid_id aff2" -> Should get aff1 and aff2, ignore invalid_id
+    affs = authors[0].affiliations
+    assert len(affs) == 2
+    assert "Affiliation One" in affs
+    assert "Affiliation Two" in affs
+
+
+def test_parse_authors_xref_types(author_edge_case_articles: list[etree._Element]) -> None:
+    # Case 10: Xref missing ref-type or wrong type
+    article = author_edge_case_articles[4]
+    authors = parse_article_authors(article)
+
+    assert len(authors) == 1
+    # Should only pick up the one with ref-type="aff"
+    assert len(authors[0].affiliations) == 1
+    assert authors[0].affiliations[0] == "Correct Affiliation"
