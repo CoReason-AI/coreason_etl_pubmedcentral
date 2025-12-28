@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <!-- Case 6: Multiple contrib-groups (e.g. Authors and Editors) -->
+    <article>
+        <front>
+            <article-meta>
+                <contrib-group content-type="authors">
+                    <contrib contrib-type="author">
+                        <name><surname>Author</surname><given-names>One</given-names></name>
+                        <xref ref-type="aff" rid="aff1"/>
+                    </contrib>
+                </contrib-group>
+                <contrib-group content-type="editors">
+                    <contrib contrib-type="editor">
+                        <name><surname>Editor</surname><given-names>Two</given-names></name>
+                        <xref ref-type="aff" rid="aff1"/>
+                    </contrib>
+                </contrib-group>
+                <aff id="aff1">Shared Institute</aff>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- Case 7: Duplicate aff IDs (Last one should likely win or be handled) -->
+    <article>
+        <front>
+            <article-meta>
+                <contrib-group>
+                    <contrib contrib-type="author">
+                        <name><surname>Dupe</surname><given-names>User</given-names></name>
+                        <xref ref-type="aff" rid="aff_dupe"/>
+                    </contrib>
+                </contrib-group>
+                <aff id="aff_dupe">First Definition</aff>
+                <aff id="aff_dupe">Second Definition</aff>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- Case 8: Unicode Characters -->
+    <article>
+        <front>
+            <article-meta>
+                <contrib-group>
+                    <contrib contrib-type="author">
+                        <name><surname>Müller</surname><given-names>Jürgen</given-names></name>
+                        <xref ref-type="aff" rid="aff_uni"/>
+                    </contrib>
+                </contrib-group>
+                <aff id="aff_uni">Universität Tübingen</aff>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- Case 9: Mixed Valid/Invalid RIDs -->
+    <article>
+        <front>
+            <article-meta>
+                <contrib-group>
+                    <contrib contrib-type="author">
+                        <name><surname>Mixed</surname><given-names>Links</given-names></name>
+                        <xref ref-type="aff" rid="aff1 invalid_id aff2"/>
+                    </contrib>
+                </contrib-group>
+                <aff id="aff1">Affiliation One</aff>
+                <aff id="aff2">Affiliation Two</aff>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- Case 10: Xref missing ref-type or wrong type -->
+    <article>
+        <front>
+            <article-meta>
+                <contrib-group>
+                    <contrib contrib-type="author">
+                        <name><surname>Wrong</surname><given-names>Type</given-names></name>
+                        <xref rid="aff1"/> <!-- Missing ref-type -->
+                        <xref ref-type="fig" rid="aff1"/> <!-- Wrong ref-type -->
+                        <xref ref-type="aff" rid="aff1"/> <!-- Correct -->
+                    </contrib>
+                </contrib-group>
+                <aff id="aff1">Correct Affiliation</aff>
+            </article-meta>
+        </front>
+    </article>
+</root>
