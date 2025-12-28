@@ -150,7 +150,7 @@ def test_parse_identity_whitespace_and_empty(complex_articles: list[etree._Eleme
     assert identity.pmcid == "33333"
     # Empty tags or whitespace-only tags should return None (not empty string)
     assert identity.pmid is None  # Was empty tag
-    assert identity.doi is None   # Was whitespace only
+    assert identity.doi is None  # Was whitespace only
     assert identity.article_type == ArticleType.CASE_REPORT
 
 
