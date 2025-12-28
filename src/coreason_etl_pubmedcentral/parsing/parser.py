@@ -34,12 +34,26 @@ class ArticleDates(NamedTuple):
     date_accepted: Optional[str]
 
 
+class ArticleAuthor(NamedTuple):
+    surname: Optional[str]
+    given_names: Optional[str]
+    affiliations: list[str]
+
+
 def _get_text(element: etree._Element, xpath_query: str) -> Optional[str]:
     """Helper to safely get text from an element using xpath."""
     nodes = element.xpath(xpath_query)
     if nodes and nodes[0].text:
         return nodes[0].text.strip()  # type: ignore
     return None
+
+
+def _get_full_text(element: etree._Element) -> str:
+    """
+    Helper to extract all text content from an element, including children.
+    Equivalent to XPath string(.).
+    """
+    return "".join(element.itertext()).strip()
 
 
 def _normalize_date_element(date_element: etree._Element) -> Optional[str]:
@@ -215,3 +229,60 @@ def parse_article_identity(article_element: etree._Element) -> ArticleIdentity:
         # else remains OTHER
 
     return ArticleIdentity(pmcid=pmcid, pmid=pmid, doi=doi, article_type=article_type)
+
+
+def parse_article_authors(article_element: etree._Element) -> list[ArticleAuthor]:
+    """
+    Parses author and affiliation information from a JATS XML article.
+    Resolves internal references (rid -> id) to link authors to affiliations.
+
+    Args:
+        article_element: The root <article> element.
+
+    Returns:
+        List of ArticleAuthor objects containing surname, given_names, and affiliations.
+    """
+    # 1. Map Affiliations
+    # Parse all //aff nodes into a dictionary: {id: "Affiliation Text"}
+    aff_map: dict[str, str] = {}
+    aff_nodes = article_element.xpath(".//*[local-name()='aff']")
+    for node in aff_nodes:
+        aff_id = node.get("id")
+        if aff_id:
+            # Use _get_full_text to capture text from children like <label>, <institution>, etc.
+            text = _get_full_text(node)
+            if text:
+                aff_map[aff_id] = text
+
+    authors: list[ArticleAuthor] = []
+
+    # 2. Iterate Contributors
+    # Target: //contrib-group/contrib
+    # We filter for only those inside a contrib-group to avoid random contribs elsewhere if any
+    contrib_nodes = article_element.xpath(".//*[local-name()='contrib-group']/*[local-name()='contrib']")
+
+    for contrib in contrib_nodes:
+        # Extract name parts
+        surname = _get_text(contrib, ".//*[local-name()='surname']")
+        given_names = _get_text(contrib, ".//*[local-name()='given-names']")
+
+        # Extract Affiliation References
+        # Target: //xref[@ref-type='aff']/@rid
+        # Note: A single xref can point to multiple IDs (space separated)?
+        # JATS spec says @rid is IDREFS (space separated).
+        # But commonly we see separate xref tags. We should handle both if possible,
+        # but typically we iterate xref nodes.
+        affiliations: list[str] = []
+        xref_nodes = contrib.xpath(".//*[local-name()='xref'][@ref-type='aff']")
+        for xref in xref_nodes:
+            rid_str = xref.get("rid")
+            if rid_str:
+                # Handle potential space-separated IDs
+                rids = rid_str.split()
+                for rid in rids:
+                    if rid in aff_map:
+                        affiliations.append(aff_map[rid])
+
+        authors.append(ArticleAuthor(surname=surname, given_names=given_names, affiliations=affiliations))
+
+    return authors
