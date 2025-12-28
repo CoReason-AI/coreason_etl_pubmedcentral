@@ -12,13 +12,14 @@ import os
 from typing import Generator
 
 import pytest
+from lxml import etree
+
 from coreason_etl_pubmedcentral.parsing.parser import (
     ArticleType,
     parse_article_authors,
     parse_article_dates,
     parse_article_identity,
 )
-from lxml import etree
 
 
 @pytest.fixture  # type: ignore
