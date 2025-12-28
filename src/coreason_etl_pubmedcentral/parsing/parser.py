@@ -42,7 +42,8 @@ def parse_article_identity(article_element: etree._Element) -> ArticleIdentity:
     # 1. Extract PMCID
     # Target: //article-id[@pub-id-type='pmc']
     # Logic: Strip "PMC" prefix.
-    pmcid_elem = article_element.xpath(".//article-id[@pub-id-type='pmc']")
+    # Note: Use local-name() to be namespace-agnostic (JATS often uses default xmlns)
+    pmcid_elem = article_element.xpath(".//*[local-name()='article-id'][@pub-id-type='pmc']")
     pmcid: Optional[str] = None
     if pmcid_elem and pmcid_elem[0].text:
         raw_pmc = pmcid_elem[0].text.strip()
@@ -53,17 +54,21 @@ def parse_article_identity(article_element: etree._Element) -> ArticleIdentity:
 
     # 2. Extract PMID
     # Target: //article-id[@pub-id-type='pmid']
-    pmid_elem = article_element.xpath(".//article-id[@pub-id-type='pmid']")
+    pmid_elem = article_element.xpath(".//*[local-name()='article-id'][@pub-id-type='pmid']")
     pmid: Optional[str] = None
     if pmid_elem and pmid_elem[0].text:
-        pmid = pmid_elem[0].text.strip()
+        pmid_text = pmid_elem[0].text.strip()
+        if pmid_text:
+            pmid = pmid_text
 
     # 3. Extract DOI
     # Target: //article-id[@pub-id-type='doi']
-    doi_elem = article_element.xpath(".//article-id[@pub-id-type='doi']")
+    doi_elem = article_element.xpath(".//*[local-name()='article-id'][@pub-id-type='doi']")
     doi: Optional[str] = None
     if doi_elem and doi_elem[0].text:
-        doi = doi_elem[0].text.strip()
+        doi_text = doi_elem[0].text.strip()
+        if doi_text:
+            doi = doi_text
 
     # 4. Extract Article Type
     # Target: /article/@article-type

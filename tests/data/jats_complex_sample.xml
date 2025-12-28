@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <!-- 1. Namespaced Article -->
+    <article xmlns:ali="http://www.niso.org/schemas/ali/1.0/" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:mml="http://www.w3.org/1998/Math/MathML" article-type="research-article">
+        <front>
+            <article-meta>
+                <article-id pub-id-type="pmc">PMC99999</article-id>
+                <article-id pub-id-type="pmid">99999999</article-id>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 2. Multiple IDs -->
+    <article article-type="review-article">
+        <front>
+            <article-meta>
+                <article-id pub-id-type="pmc">PMC11111</article-id>
+                <article-id pub-id-type="pmc">PMC22222</article-id> <!-- Should pick first? -->
+                <article-id pub-id-type="doi">10.1000/first</article-id>
+                <article-id pub-id-type="doi">10.1000/second</article-id>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 3. Empty Tags / Weird Whitespace -->
+    <article article-type="case-report">
+        <front>
+            <article-meta>
+                <article-id pub-id-type="pmc">
+                   PMC33333
+                </article-id>
+                <article-id pub-id-type="pmid"></article-id> <!-- Empty -->
+                <article-id pub-id-type="doi">   </article-id> <!-- Whitespace only -->
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 4. Other Article Types -->
+    <article article-type="letter">
+        <front>
+            <article-meta>
+                <article-id pub-id-type="pmc">PMC44444</article-id>
+            </article-meta>
+        </front>
+    </article>
+
+    <article article-type="correction">
+        <front>
+            <article-meta>
+                <article-id pub-id-type="pmc">PMC55555</article-id>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 6. Real Default Namespace -->
+    <article xmlns="http://jats.nlm.nih.gov" article-type="research-article">
+        <front>
+            <article-meta>
+                <article-id pub-id-type="pmc">PMC66666</article-id>
+            </article-meta>
+        </front>
+    </article>
+</root>

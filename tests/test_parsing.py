@@ -30,6 +30,16 @@ def articles(sample_data_path: str) -> Generator[list[etree._Element], None, Non
     yield list(root.findall("article"))
 
 
+@pytest.fixture  # type: ignore
+def complex_articles() -> Generator[list[etree._Element], None, None]:
+    path = os.path.join(os.path.dirname(__file__), "data", "jats_complex_sample.xml")
+    tree = etree.parse(path)
+    root = tree.getroot()
+    # Find all 'article' elements regardless of namespace
+    # Using XPath with local-name() is safer here
+    yield root.xpath("//*[local-name()='article']")
+
+
 def test_parse_identity_research(articles: list[etree._Element]) -> None:
     # First article is research-article
     article = articles[0]
@@ -108,3 +118,61 @@ def test_pmc_strip_variations() -> None:
     article = etree.fromstring(xml_lower)
     identity = parse_article_identity(article)
     assert identity.pmcid == "12345"
+
+
+def test_parse_identity_namespaces(complex_articles: list[etree._Element]) -> None:
+    # 1. Namespaced Article
+    article = complex_articles[0]
+    identity = parse_article_identity(article)
+
+    assert identity.pmcid == "99999"
+    assert identity.pmid == "99999999"
+    assert identity.article_type == ArticleType.RESEARCH
+
+
+def test_parse_identity_multiple_ids(complex_articles: list[etree._Element]) -> None:
+    # 2. Multiple IDs
+    article = complex_articles[1]
+    identity = parse_article_identity(article)
+
+    # Should pick the first one found
+    assert identity.pmcid == "11111"
+    assert identity.doi == "10.1000/first"
+    assert identity.article_type == ArticleType.REVIEW
+
+
+def test_parse_identity_whitespace_and_empty(complex_articles: list[etree._Element]) -> None:
+    # 3. Empty Tags / Weird Whitespace
+    article = complex_articles[2]
+    identity = parse_article_identity(article)
+
+    # Whitespace around ID should be stripped
+    assert identity.pmcid == "33333"
+    # Empty tags or whitespace-only tags should return None (not empty string)
+    assert identity.pmid is None  # Was empty tag
+    assert identity.doi is None   # Was whitespace only
+    assert identity.article_type == ArticleType.CASE_REPORT
+
+
+def test_parse_identity_other_types(complex_articles: list[etree._Element]) -> None:
+    # 4. Other types (letter)
+    article_letter = complex_articles[3]
+    identity_letter = parse_article_identity(article_letter)
+    assert identity_letter.pmcid == "44444"
+    assert identity_letter.article_type == ArticleType.OTHER
+
+    # 5. Other types (correction)
+    article_correction = complex_articles[4]
+    identity_correction = parse_article_identity(article_correction)
+    assert identity_correction.pmcid == "55555"
+    assert identity_correction.article_type == ArticleType.OTHER
+
+
+def test_parse_identity_real_namespace(complex_articles: list[etree._Element]) -> None:
+    # 6. Real Default Namespace
+    article = complex_articles[5]
+    identity = parse_article_identity(article)
+
+    # This often fails if XPath doesn't handle namespaces or local-name()
+    assert identity.pmcid == "66666"
+    assert identity.article_type == ArticleType.RESEARCH
