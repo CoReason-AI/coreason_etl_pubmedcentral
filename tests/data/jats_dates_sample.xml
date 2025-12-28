@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root xmlns:ali="http://www.niso.org/schemas/ali/1.0/" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- 1. Priority: epub > ppub. Full dates. -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="ppub">
+                    <day>01</day>
+                    <month>06</month>
+                    <year>2023</year>
+                </pub-date>
+                <pub-date pub-type="epub">
+                    <day>15</day>
+                    <month>05</month>
+                    <year>2023</year>
+                </pub-date>
+                <history>
+                    <date date-type="received">
+                        <day>10</day>
+                        <month>01</month>
+                        <year>2023</year>
+                    </date>
+                    <date date-type="accepted">
+                        <day>20</day>
+                        <month>04</month>
+                        <year>2023</year>
+                    </date>
+                </history>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 2. Defaults: Year only. -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <year>2023</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 3. Defaults: Year and Month only. -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <month>07</month>
+                    <year>2023</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 4. Season: Spring (03). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="ppub">
+                    <season>Spring</season>
+                    <year>2024</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 5. Season: Summer (06). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="ppub">
+                    <season>Summer</season>
+                    <year>2024</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 6. Season: Fall (09). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="ppub">
+                    <season>Fall</season>
+                    <year>2024</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 7. Season: Winter (12). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="ppub">
+                    <season>Winter</season>
+                    <year>2024</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 8. Priority Fallback: Only ppub. -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="ppub">
+                    <day>25</day>
+                    <month>12</month>
+                    <year>2022</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 9. Priority Fallback: Only pmc-release. -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="pmc-release">
+                    <day>01</day>
+                    <month>01</month>
+                    <year>2021</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 10. Missing Year (Invalid). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <month>05</month>
+                    <day>15</day>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 11. Namespaced article. -->
+    <article xmlns:ns1="http://example.org/ns">
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <ns1:day>05</ns1:day>
+                    <ns1:month>05</ns1:month>
+                    <ns1:year>2025</ns1:year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 12. Unknown Season (Should default to 01 if not matched). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="ppub">
+                    <season>Mid-Summer</season>
+                    <year>2026</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 13. Textual Month (Should default to 01 if not mapped, or we could map it if we want, but currently spec implies 01 if invalid/missing).
+         Actually, let's assume we want valid ISO, so "May" -> "01" if we don't implement English mapping.
+         (Ideally we would map it, but for strict atomic unit, we enforce ISO structure). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <month>May</month>
+                    <year>2027</year>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 14. Whitespace Handling. -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <year>  2028  </year>
+                    <month>  08  </month>
+                    <day>  15  </day>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 15. Multiple dates of same type (Should pick first). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <year>2029</year>
+                    <month>01</month>
+                    <day>01</day>
+                </pub-date>
+                <pub-date pub-type="epub">
+                    <year>2029</year>
+                    <month>12</month>
+                    <day>31</day>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 16. Case Insensitive pub-type (EPUB). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="EPUB">
+                    <year>2030</year>
+                    <month>01</month>
+                    <day>01</day>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- 17. Non-Numeric Day (Should default to 01). -->
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <year>2031</year>
+                    <month>05</month>
+                    <day>15th</day>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+</root>

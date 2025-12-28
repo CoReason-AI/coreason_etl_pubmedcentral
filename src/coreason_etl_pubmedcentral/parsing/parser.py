@@ -28,6 +28,134 @@ class ArticleIdentity(NamedTuple):
     article_type: ArticleType
 
 
+class ArticleDates(NamedTuple):
+    date_published: Optional[str]
+    date_received: Optional[str]
+    date_accepted: Optional[str]
+
+
+def _get_text(element: etree._Element, xpath_query: str) -> Optional[str]:
+    """Helper to safely get text from an element using xpath."""
+    nodes = element.xpath(xpath_query)
+    if nodes and nodes[0].text:
+        return nodes[0].text.strip()  # type: ignore
+    return None
+
+
+def _normalize_date_element(date_element: etree._Element) -> Optional[str]:
+    """
+    Parses a JATS date element (pub-date or date) into an ISO-8601 string.
+    Handles Year, Month/Season, Day.
+    Logic:
+      - Year is mandatory. If missing, return None.
+      - Month/Day default to '01'.
+      - Season mapping: Spring->03, Summer->06, Fall->09, Winter->12.
+    """
+    # 1. Extract Year
+    year = _get_text(date_element, ".//*[local-name()='year']")
+    if not year:
+        return None
+
+    # 2. Extract Month or Season
+    month = "01"
+    raw_month = _get_text(date_element, ".//*[local-name()='month']")
+    raw_season = _get_text(date_element, ".//*[local-name()='season']")
+
+    if raw_month:
+        # Pad with zero if needed
+        if raw_month.isdigit():
+            month = raw_month.zfill(2)
+        else:
+            # Non-numeric month -> strict ISO fail -> default to 01
+            month = "01"
+    elif raw_season:
+        # Map season to month
+        s = raw_season.lower()
+        if s == "spring":
+            month = "03"
+        elif s == "summer":
+            month = "06"
+        elif s == "fall":
+            month = "09"
+        elif s == "winter":
+            month = "12"
+        # Else unknown season -> keep default "01"
+
+    # 3. Extract Day
+    day = "01"
+    raw_day = _get_text(date_element, ".//*[local-name()='day']")
+    if raw_day:
+        if raw_day.isdigit():
+            day = raw_day.zfill(2)
+        else:
+            day = "01"
+
+    return f"{year}-{month}-{day}"
+
+
+def parse_article_dates(article_element: etree._Element) -> ArticleDates:
+    """
+    Parses temporal metadata from a JATS XML article.
+
+    Args:
+        article_element: The root <article> element.
+
+    Returns:
+        ArticleDates containing date_published, date_received, date_accepted.
+    """
+    # 1. Date Published
+    # Priority: epub > ppub > pmc-release
+    date_published: Optional[str] = None
+
+    # We look for all pub-date elements first to minimize xpath calls if possible,
+    # but specific xpath is cleaner.
+    # To handle case-insensitivity of @pub-type, we use python logic or complex xpath.
+    # Simple python filtering is safer and readable.
+
+    pub_dates = article_element.xpath(".//*[local-name()='pub-date']")
+
+    # Helper to find date by type (case-insensitive)
+    def find_date_by_type(ptype: str) -> Optional[str]:
+        for node in pub_dates:
+            raw_ptype = node.get("pub-type")
+            if raw_ptype and raw_ptype.lower() == ptype:
+                res = _normalize_date_element(node)
+                if res:
+                    return res
+        return None
+
+    # Check epub
+    date_published = find_date_by_type("epub")
+
+    # Check ppub if no epub
+    if not date_published:
+        date_published = find_date_by_type("ppub")
+
+    # Check pmc-release if no epub or ppub
+    if not date_published:
+        date_published = find_date_by_type("pmc-release")
+
+    # 2. Date Received
+    # Target: //history/date[@date-type='received']
+    date_received: Optional[str] = None
+    received_nodes = article_element.xpath(".//*[local-name()='history']/*[local-name()='date'][@date-type='received']")
+    if received_nodes:
+        date_received = _normalize_date_element(received_nodes[0])
+
+    # 3. Date Accepted
+    # Target: //history/date[@date-type='accepted']
+    date_accepted: Optional[str] = None
+    accepted_nodes = article_element.xpath(".//*[local-name()='history']/*[local-name()='date'][@date-type='accepted']")
+    if accepted_nodes:
+        date_accepted = _normalize_date_element(accepted_nodes[0])
+
+    return ArticleDates(
+        date_published=date_published,
+        date_received=date_received,
+        date_accepted=date_accepted,
+    )
+
+
 def parse_article_identity(article_element: etree._Element) -> ArticleIdentity:
     """
     Parses identity and classification information from a JATS XML article element.
