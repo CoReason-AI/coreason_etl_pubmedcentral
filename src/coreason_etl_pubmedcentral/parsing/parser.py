@@ -81,9 +81,4 @@ def parse_article_identity(article_element: etree._Element) -> ArticleIdentity:
             article_type = ArticleType.CASE_REPORT
         # else remains OTHER
 
-    return ArticleIdentity(
-        pmcid=pmcid,
-        pmid=pmid,
-        doi=doi,
-        article_type=article_type
-    )
+    return ArticleIdentity(pmcid=pmcid, pmid=pmid, doi=doi, article_type=article_type)

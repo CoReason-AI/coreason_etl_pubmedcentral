@@ -12,8 +12,9 @@ import os
 from typing import Generator
 
 import pytest
-from coreason_etl_pubmedcentral.parsing.parser import ArticleType, parse_article_identity
 from lxml import etree
+
+from coreason_etl_pubmedcentral.parsing.parser import ArticleType, parse_article_identity
 
 
 @pytest.fixture  # type: ignore
@@ -78,6 +79,7 @@ def test_parse_identity_minimal(articles: list[etree._Element]) -> None:
     assert identity.pmid is None
     assert identity.doi is None
     assert identity.article_type == ArticleType.OTHER
+
 
 def test_pmc_strip_variations() -> None:
     # Test variation where PMC prefix might be missing or different case (though typically uppercase)
