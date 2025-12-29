@@ -227,3 +227,117 @@ def test_source_manager_auto_creation() -> None:
                 list(pmc_xml_files("path"))
 
         MockSM.assert_called_once()
+
+
+# --- Complex / Edge Cases ---
+
+
+def test_pmc_xml_files_mixed_batch(mock_source_manager: MagicMock) -> None:
+    """
+    Test processing a mixed batch of files:
+    1. Success
+    2. Download Failure
+    3. Decode Failure (UTF-8)
+    4. Success
+    """
+    records = [
+        ManifestRecord("file1.xml", "PMC1", datetime.now(timezone.utc), None, "CC0", False),
+        ManifestRecord("file2.xml", "PMC2", datetime.now(timezone.utc), None, "CC0", False),
+        ManifestRecord("file3.xml", "PMC3", datetime.now(timezone.utc), None, "CC0", False),
+        ManifestRecord("file4.xml", "PMC4", datetime.now(timezone.utc), None, "CC0", False),
+    ]
+
+    # Side effects for get_file:
+    # 1. Success
+    # 2. Exception
+    # 3. Success (bytes) but...
+    # 4. Success
+
+    # For file3, we return bytes that fail decoding.
+    # b"\x80" is invalid start byte in UTF-8
+
+    mock_source_manager.get_file.side_effect = [
+        b"<doc>1</doc>",
+        Exception("Download Error"),
+        b"\x80",
+        b"<doc>4</doc>",
+    ]
+
+    with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=records):
+        with patch("builtins.open", mock_open()):
+            with patch("coreason_etl_pubmedcentral.pipeline_source.logger") as mock_logger:
+                inc = dlt.sources.incremental("last_updated")
+                items = list(pmc_xml_files("path.csv", source_manager=mock_source_manager, last_updated=inc))
+
+                # Verify only 2 successful items yielded
+                assert len(items) == 2
+                assert items[0]["manifest_metadata"]["accession_id"] == "PMC1"
+                assert items[1]["manifest_metadata"]["accession_id"] == "PMC4"
+
+                # Verify logs
+                # Should have error logs for file2 and file3
+                assert mock_logger.error.call_count >= 2
+
+                # Check call args to verify file paths involved
+                error_calls = mock_logger.error.call_args_list
+                assert any("file2.xml" in str(call.args) for call in error_calls)
+                assert any("file3.xml" in str(call.args) for call in error_calls)
+
+
+def test_pmc_xml_files_utf8_decode_error(mock_source_manager: MagicMock) -> None:
+    """Explicitly test handling of invalid UTF-8."""
+    record = ManifestRecord("bad_enc.xml", "PMC1", datetime.now(timezone.utc), None, "CC0", False)
+
+    # Return invalid utf-8
+    mock_source_manager.get_file.return_value = b"\xff\xfe\x00\x00" # UTF-32 BOM or garbage
+
+    with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[record]):
+        with patch("builtins.open", mock_open()):
+             with patch("coreason_etl_pubmedcentral.pipeline_source.logger") as mock_logger:
+                inc = dlt.sources.incremental("last_updated")
+                items = list(pmc_xml_files("path.csv", source_manager=mock_source_manager, last_updated=inc))
+
+                assert len(items) == 0
+                mock_logger.error.assert_called()
+                assert "UnicodeDecodeError" in str(mock_logger.error.call_args) or "codec" in str(mock_logger.error.call_args)
+
+
+def test_pmc_xml_files_source_change_tracking(mock_source_manager: MagicMock) -> None:
+    """
+    Verify that ingestion_source is captured correctly if it changes during execution.
+    """
+    records = [
+        ManifestRecord("file1.xml", "PMC1", datetime.now(timezone.utc), None, "CC0", False),
+        ManifestRecord("file2.xml", "PMC2", datetime.now(timezone.utc), None, "CC0", False),
+    ]
+
+    def get_file_side_effect(path: str) -> bytes:
+        if path == "file1.xml":
+            mock_source_manager._current_source = SourceType.S3
+            return b"content1"
+        else:
+            # Simulate failover happened during file2 fetch
+            mock_source_manager._current_source = SourceType.FTP
+            return b"content2"
+
+    mock_source_manager.get_file.side_effect = get_file_side_effect
+
+    with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=records):
+        with patch("builtins.open", mock_open()):
+            inc = dlt.sources.incremental("last_updated")
+            items = list(pmc_xml_files("path.csv", source_manager=mock_source_manager, last_updated=inc))
+
+            assert len(items) == 2
+
+            assert items[0]["ingestion_source"] == "S3"
+            assert items[1]["ingestion_source"] == "FTP"
+
+
+def test_pmc_xml_files_empty_manifest(mock_source_manager: MagicMock) -> None:
+    """Verify behavior with empty manifest (no records)."""
+    with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[]):
+        with patch("builtins.open", mock_open()):
+            inc = dlt.sources.incremental("last_updated")
+            items = list(pmc_xml_files("path.csv", source_manager=mock_source_manager, last_updated=inc))
+
+            assert len(items) == 0
