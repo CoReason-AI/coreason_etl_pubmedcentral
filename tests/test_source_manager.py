@@ -18,7 +18,7 @@ from botocore.exceptions import ClientError
 from coreason_etl_pubmedcentral.source_manager import SourceManager, SourceType
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def source_manager() -> Generator[SourceManager, None, None]:
     with patch("boto3.client"):
         sm = SourceManager()
@@ -301,11 +301,11 @@ def test_ensure_ftp_connection_failure_handling(source_manager: SourceManager) -
     # This is defensively reachable if _ensure_ftp_connection somehow returned without raising but _ftp is None.
     # We can mock _ensure_ftp_connection to do nothing.
 
-    source_manager._ensure_ftp_connection = MagicMock()
-    source_manager._ftp = None
+    with patch.object(source_manager, "_ensure_ftp_connection", return_value=None):
+        source_manager._ftp = None
 
-    with pytest.raises(RuntimeError, match="FTP connection could not be established"):
-        source_manager.get_file("file")
+        with pytest.raises(RuntimeError, match="FTP connection could not be established"):
+            source_manager.get_file("file")
 
 
 def test_ftp_reconnect_returns_none_silent_failure(source_manager: SourceManager) -> None:
@@ -324,12 +324,11 @@ def test_ftp_reconnect_returns_none_silent_failure(source_manager: SourceManager
     # catch error -> _close_ftp() (sets _ftp=None) -> _ensure_ftp_connection() (mocked, does nothing)
     # -> check if not self._ftp -> raise e (Initial Failure)
 
-    source_manager._ensure_ftp_connection = MagicMock()
+    with patch.object(source_manager, "_ensure_ftp_connection", return_value=None):
+        with pytest.raises(EOFError) as exc:
+            source_manager.get_file("file")
 
-    with pytest.raises(EOFError) as exc:
-        source_manager.get_file("file")
-
-    assert str(exc.value) == "Initial Failure"
+        assert str(exc.value) == "Initial Failure"
 
 
 def test_unknown_source_state(source_manager: SourceManager) -> None:
