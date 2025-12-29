@@ -40,6 +40,11 @@ class ArticleAuthor(NamedTuple):
     affiliations: list[str]
 
 
+class ArticleFunding(NamedTuple):
+    agency: Optional[str]
+    grant_id: Optional[str]
+
+
 def _get_text(element: etree._Element, xpath_query: str) -> Optional[str]:
     """Helper to safely get text from an element using xpath."""
     nodes = element.xpath(xpath_query)
@@ -286,3 +291,59 @@ def parse_article_authors(article_element: etree._Element) -> list[ArticleAuthor
         authors.append(ArticleAuthor(surname=surname, given_names=given_names, affiliations=affiliations))
 
     return authors
+
+
+def parse_article_funding(article_element: etree._Element) -> list[ArticleFunding]:
+    """
+    Parses funding information from a JATS XML article.
+    Handles both Modern JATS (funding-group/award-group) and Legacy JATS (article-meta/contract-*).
+
+    Args:
+        article_element: The root <article> element.
+
+    Returns:
+        List of ArticleFunding objects containing agency and grant_id.
+    """
+    funding_list: list[ArticleFunding] = []
+
+    # 1. Modern JATS: //funding-group/award-group
+    award_groups = article_element.xpath(".//*[local-name()='funding-group']/*[local-name()='award-group']")
+    for group in award_groups:
+        agency: Optional[str] = None
+        grant_id: Optional[str] = None
+
+        # Extract Agency from funding-source
+        sources = group.xpath(".//*[local-name()='funding-source']")
+        if sources:
+            text = _get_full_text(sources[0])
+            if text:
+                agency = text
+
+        # Extract Grant ID from award-id
+        ids = group.xpath(".//*[local-name()='award-id']")
+        if ids:
+            text = _get_full_text(ids[0])
+            if text:
+                grant_id = text
+
+        if agency or grant_id:
+            funding_list.append(ArticleFunding(agency=agency, grant_id=grant_id))
+
+    # 2. Legacy JATS: //article-meta/contract-sponsor and //article-meta/contract-num
+    # Treated as independent signals if not grouped.
+
+    # Process Contract Sponsors (Agency only)
+    sponsors = article_element.xpath(".//*[local-name()='article-meta']/*[local-name()='contract-sponsor']")
+    for node in sponsors:
+        text = _get_full_text(node)
+        if text:
+            funding_list.append(ArticleFunding(agency=text, grant_id=None))
+
+    # Process Contract Numbers (Grant ID only)
+    nums = article_element.xpath(".//*[local-name()='article-meta']/*[local-name()='contract-num']")
+    for node in nums:
+        text = _get_full_text(node)
+        if text:
+            funding_list.append(ArticleFunding(agency=None, grant_id=text))
+
+    return funding_list

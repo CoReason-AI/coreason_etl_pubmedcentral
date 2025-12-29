@@ -18,6 +18,7 @@ from coreason_etl_pubmedcentral.parsing.parser import (
     ArticleType,
     parse_article_authors,
     parse_article_dates,
+    parse_article_funding,
     parse_article_identity,
 )
 
@@ -40,6 +41,11 @@ def authors_data_path() -> str:
 @pytest.fixture  # type: ignore
 def authors_edge_cases_path() -> str:
     return os.path.join(os.path.dirname(__file__), "data", "jats_authors_edge_cases.xml")
+
+
+@pytest.fixture  # type: ignore
+def funding_data_path() -> str:
+    return os.path.join(os.path.dirname(__file__), "data", "jats_funding_sample.xml")
 
 
 @pytest.fixture  # type: ignore
@@ -81,6 +87,13 @@ def author_edge_case_articles(authors_edge_cases_path: str) -> Generator[list[et
     tree = etree.parse(authors_edge_cases_path)
     root = tree.getroot()
     # Find all 'article' elements regardless of namespace
+    yield root.xpath("//*[local-name()='article']")
+
+
+@pytest.fixture  # type: ignore
+def funding_articles(funding_data_path: str) -> Generator[list[etree._Element], None, None]:
+    tree = etree.parse(funding_data_path)
+    root = tree.getroot()
     yield root.xpath("//*[local-name()='article']")
 
 
@@ -466,3 +479,67 @@ def test_parse_authors_xref_types(author_edge_case_articles: list[etree._Element
     # Should only pick up the one with ref-type="aff"
     assert len(authors[0].affiliations) == 1
     assert authors[0].affiliations[0] == "Correct Affiliation"
+
+
+def test_parse_funding_modern(funding_articles: list[etree._Element]) -> None:
+    # Modern JATS
+    article = funding_articles[0]
+    funding = parse_article_funding(article)
+
+    # 3 groups
+    assert len(funding) == 3
+
+    # 1. NIH, R01-12345
+    assert funding[0].agency == "National Institutes of Health"
+    assert funding[0].grant_id == "R01-12345"
+
+    # 2. NSF, None
+    assert funding[1].agency == "NSF"
+    assert funding[1].grant_id is None
+
+    # 3. None, G-999
+    assert funding[2].agency is None
+    assert funding[2].grant_id == "G-999"
+
+
+def test_parse_funding_legacy(funding_articles: list[etree._Element]) -> None:
+    # Legacy JATS
+    article = funding_articles[1]
+    funding = parse_article_funding(article)
+
+    # Expect: 2 sponsors (Pfizer, Moderna) + 1 num (CN-1001) = 3 entries
+    assert len(funding) == 3
+
+    # Order depends on implementation (sponsors first then nums)
+    # Sponsors
+    agencies = {f.agency for f in funding if f.agency}
+    assert "Pfizer" in agencies
+    assert "Moderna" in agencies
+
+    # Numbers
+    ids = {f.grant_id for f in funding if f.grant_id}
+    assert "CN-1001" in ids
+
+
+def test_parse_funding_mixed(funding_articles: list[etree._Element]) -> None:
+    # Mixed JATS (Modern + Legacy)
+    article = funding_articles[2]
+    funding = parse_article_funding(article)
+
+    # 1 award group + 1 contract-sponsor = 2 entries
+    assert len(funding) == 2
+
+    agencies = {f.agency for f in funding if f.agency}
+    assert "Wellcome Trust" in agencies
+    assert "Gates Foundation" in agencies
+
+    ids = {f.grant_id for f in funding if f.grant_id}
+    assert "WT-555" in ids
+
+
+def test_parse_funding_empty(funding_articles: list[etree._Element]) -> None:
+    # Empty award group
+    article = funding_articles[3]
+    funding = parse_article_funding(article)
+
+    assert len(funding) == 0
