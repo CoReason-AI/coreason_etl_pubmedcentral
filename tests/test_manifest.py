@@ -114,3 +114,75 @@ def test_parse_manifest_blank_lines() -> None:
     records = list(parse_manifest(iter(data)))
     assert len(records) == 1
     assert records[0].accession_id == "PMC1"
+
+
+def test_parse_manifest_quoted_fields() -> None:
+    # Test fields containing commas within quotes
+    data = [
+        "Header",
+        '"path/to/file,with,commas.xml",PMC_Q,2024-01-01 10:00:00,1234,"CC,BY",no',
+    ]
+    records = list(parse_manifest(iter(data)))
+    assert len(records) == 1
+    assert records[0].file_path == "path/to/file,with,commas.xml"
+    assert records[0].license_type == "CC,BY"
+
+
+def test_parse_manifest_whitespace_stripping() -> None:
+    # Test surrounding whitespace is stripped
+    data = [
+        "Header",
+        "  path/xml  ,  PMC_WS  ,  2024-01-01 10:00:00  ,  1234  ,  CC-BY  ,  no  ",
+    ]
+    records = list(parse_manifest(iter(data)))
+    assert len(records) == 1
+    assert records[0].file_path == "path/xml"
+    assert records[0].accession_id == "PMC_WS"
+    # Date parsing should handle whitespace because we strip before parsing
+    assert records[0].last_updated == datetime(2024, 1, 1, 10, 0, 0, tzinfo=timezone.utc)
+    assert records[0].pmid == "1234"
+    assert records[0].license_type == "CC-BY"
+    assert records[0].is_retracted is False
+
+
+def test_parse_manifest_retracted_case_insensitivity() -> None:
+    # Test variants of "yes"
+    data = [
+        "Header",
+        "p1,acc1,2024-01-01 10:00:00,,Lic,YES",
+        "p2,acc2,2024-01-01 10:00:00,,Lic,Yes",
+        "p3,acc3,2024-01-01 10:00:00,,Lic,yes",
+        "p4,acc4,2024-01-01 10:00:00,,Lic,NO",
+    ]
+    records = list(parse_manifest(iter(data)))
+    assert len(records) == 4
+    assert records[0].is_retracted is True
+    assert records[1].is_retracted is True
+    assert records[2].is_retracted is True
+    assert records[3].is_retracted is False
+
+
+def test_parse_manifest_unicode_handling() -> None:
+    # Test Unicode characters in fields
+    data = [
+        "Header",
+        "path/αβγ.xml,PMC_Ω,2024-01-01 10:00:00,1234,CC-©,no",
+    ]
+    records = list(parse_manifest(iter(data)))
+    assert len(records) == 1
+    assert records[0].file_path == "path/αβγ.xml"
+    assert records[0].accession_id == "PMC_Ω"
+    assert records[0].license_type == "CC-©"
+
+
+def test_parse_manifest_timezone_forcing() -> None:
+    # Ensure naive looking string becomes UTC
+    data = [
+        "Header",
+        "p1,acc1,2024-01-01 10:00:00,1234,Lic,no",
+    ]
+    records = list(parse_manifest(iter(data)))
+    assert len(records) == 1
+    dt = records[0].last_updated
+    assert dt.tzinfo == timezone.utc
+    assert dt.isoformat() == "2024-01-01T10:00:00+00:00"
