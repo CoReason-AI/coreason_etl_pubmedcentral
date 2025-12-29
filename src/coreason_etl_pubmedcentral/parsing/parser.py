@@ -309,25 +309,35 @@ def parse_article_funding(article_element: etree._Element) -> list[ArticleFundin
     # 1. Modern JATS: //funding-group/award-group
     award_groups = article_element.xpath(".//*[local-name()='funding-group']/*[local-name()='award-group']")
     for group in award_groups:
-        agency: Optional[str] = None
-        grant_id: Optional[str] = None
-
-        # Extract Agency from funding-source
+        # Extract ALL agencies
+        agencies: list[str] = []
         sources = group.xpath(".//*[local-name()='funding-source']")
-        if sources:
-            text = _get_full_text(sources[0])
+        for source in sources:
+            text = _get_full_text(source)
             if text:
-                agency = text
+                agencies.append(text)
 
-        # Extract Grant ID from award-id
+        # Extract ALL grant IDs
+        grant_ids: list[str] = []
         ids = group.xpath(".//*[local-name()='award-id']")
-        if ids:
-            text = _get_full_text(ids[0])
+        for aid in ids:
+            text = _get_full_text(aid)
             if text:
-                grant_id = text
+                grant_ids.append(text)
 
-        if agency or grant_id:
-            funding_list.append(ArticleFunding(agency=agency, grant_id=grant_id))
+        # Cross Product Logic: Link every Agency to every Grant ID
+        if agencies and grant_ids:
+            for agency in agencies:
+                for gid in grant_ids:
+                    funding_list.append(ArticleFunding(agency=agency, grant_id=gid))
+        elif agencies:
+            # Agencies but no IDs
+            for agency in agencies:
+                funding_list.append(ArticleFunding(agency=agency, grant_id=None))
+        elif grant_ids:
+            # IDs but no Agencies
+            for gid in grant_ids:
+                funding_list.append(ArticleFunding(agency=None, grant_id=gid))
 
     # 2. Legacy JATS: //article-meta/contract-sponsor and //article-meta/contract-num
     # Treated as independent signals if not grouped.

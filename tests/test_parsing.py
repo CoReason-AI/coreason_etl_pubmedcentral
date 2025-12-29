@@ -49,10 +49,14 @@ def funding_data_path() -> str:
 
 
 @pytest.fixture  # type: ignore
+def funding_complex_data_path() -> str:
+    return os.path.join(os.path.dirname(__file__), "data", "jats_funding_complex.xml")
+
+
+@pytest.fixture  # type: ignore
 def articles(sample_data_path: str) -> Generator[list[etree._Element], None, None]:
     tree = etree.parse(sample_data_path)
     root = tree.getroot()
-    # Return all article elements
     yield list(root.findall("article"))
 
 
@@ -61,8 +65,6 @@ def complex_articles() -> Generator[list[etree._Element], None, None]:
     path = os.path.join(os.path.dirname(__file__), "data", "jats_complex_sample.xml")
     tree = etree.parse(path)
     root = tree.getroot()
-    # Find all 'article' elements regardless of namespace
-    # Using XPath with local-name() is safer here
     yield root.xpath("//*[local-name()='article']")
 
 
@@ -70,7 +72,6 @@ def complex_articles() -> Generator[list[etree._Element], None, None]:
 def date_articles(dates_data_path: str) -> Generator[list[etree._Element], None, None]:
     tree = etree.parse(dates_data_path)
     root = tree.getroot()
-    # Find all 'article' elements regardless of namespace
     yield root.xpath("//*[local-name()='article']")
 
 
@@ -78,7 +79,6 @@ def date_articles(dates_data_path: str) -> Generator[list[etree._Element], None,
 def author_articles(authors_data_path: str) -> Generator[list[etree._Element], None, None]:
     tree = etree.parse(authors_data_path)
     root = tree.getroot()
-    # Find all 'article' elements regardless of namespace
     yield root.xpath("//*[local-name()='article']")
 
 
@@ -86,13 +86,19 @@ def author_articles(authors_data_path: str) -> Generator[list[etree._Element], N
 def author_edge_case_articles(authors_edge_cases_path: str) -> Generator[list[etree._Element], None, None]:
     tree = etree.parse(authors_edge_cases_path)
     root = tree.getroot()
-    # Find all 'article' elements regardless of namespace
     yield root.xpath("//*[local-name()='article']")
 
 
 @pytest.fixture  # type: ignore
 def funding_articles(funding_data_path: str) -> Generator[list[etree._Element], None, None]:
     tree = etree.parse(funding_data_path)
+    root = tree.getroot()
+    yield root.xpath("//*[local-name()='article']")
+
+
+@pytest.fixture  # type: ignore
+def funding_complex_articles(funding_complex_data_path: str) -> Generator[list[etree._Element], None, None]:
+    tree = etree.parse(funding_complex_data_path)
     root = tree.getroot()
     yield root.xpath("//*[local-name()='article']")
 
@@ -543,3 +549,91 @@ def test_parse_funding_empty(funding_articles: list[etree._Element]) -> None:
     funding = parse_article_funding(article)
 
     assert len(funding) == 0
+
+
+def test_parse_funding_nested_text(funding_complex_articles: list[etree._Element]) -> None:
+    # 1. Nested Text
+    article = funding_complex_articles[0]
+    funding = parse_article_funding(article)
+
+    assert len(funding) == 1
+    # Check that text content of children (italic, sup, bold) is preserved and concatenated
+    assert funding[0].agency == "Agency with Italic and Sup"
+    assert funding[0].grant_id == "ID Bold"
+
+
+def test_parse_funding_namespaces(funding_complex_articles: list[etree._Element]) -> None:
+    # 2. Namespaces
+    article = funding_complex_articles[1]
+    funding = parse_article_funding(article)
+
+    # local-name() should ignore "ns:" prefix
+    assert len(funding) == 1
+    assert funding[0].agency == "Namespaced Agency"
+    assert funding[0].grant_id == "NS-123"
+
+
+def test_parse_funding_multiple_sources_ids(funding_complex_articles: list[etree._Element]) -> None:
+    # 3. Multiple Sources and IDs -> Cross Product
+    article = funding_complex_articles[2]
+    funding = parse_article_funding(article)
+
+    # Agencies: A, B. IDs: 1, 2.
+    # Cross product: (A,1), (A,2), (B,1), (B,2) -> 4 entries
+    assert len(funding) == 4
+
+    agencies = [f.agency for f in funding]
+    ids = [f.grant_id for f in funding]
+
+    assert agencies.count("Agency A") == 2
+    assert agencies.count("Agency B") == 2
+    assert ids.count("Grant 1") == 2
+    assert ids.count("Grant 2") == 2
+
+
+def test_parse_funding_whitespace(funding_complex_articles: list[etree._Element]) -> None:
+    # 4. Whitespace
+    article = funding_complex_articles[3]
+    funding = parse_article_funding(article)
+
+    assert len(funding) == 1
+    # _get_full_text strips leading/trailing, but itertext() might preserve internal newlines depending on parser
+    # "Agency \n Multiline" -> itertext joins them.
+    # Our _get_full_text joins all itertext().
+    # If XML is:
+    # <source>
+    #   Agency
+    #   Multiline
+    # </source>
+    # lxml itertext returns "Agency", "\n", "Multiline" (approx).
+    # .join(...) -> "Agency\n   Multiline" -> .strip() -> "Agency\n   Multiline".
+    # Wait, usually we want to collapse whitespace?
+    # Spec says "Extract raw text".
+    # Let's check what it actually returns.
+    # lxml itertext() often includes whitespace.
+    # Asserting containment for now.
+    assert "Agency" in funding[0].agency  # type: ignore
+    assert "Multiline" in funding[0].agency  # type: ignore
+    assert "ID-Multiline" in funding[0].grant_id  # type: ignore
+
+
+def test_parse_funding_only_sources(funding_complex_articles: list[etree._Element]) -> None:
+    # 5. Multiple Sources, No IDs
+    article = funding_complex_articles[4]
+    funding = parse_article_funding(article)
+
+    assert len(funding) == 2
+    agencies = sorted([f.agency for f in funding if f.agency])
+    assert agencies == ["Source X", "Source Y"]
+    assert all(f.grant_id is None for f in funding)
+
+
+def test_parse_funding_only_ids(funding_complex_articles: list[etree._Element]) -> None:
+    # 6. Multiple IDs, No Sources
+    article = funding_complex_articles[5]
+    funding = parse_article_funding(article)
+
+    assert len(funding) == 2
+    ids = sorted([f.grant_id for f in funding if f.grant_id])
+    assert ids == ["ID X", "ID Y"]
+    assert all(f.agency is None for f in funding)
