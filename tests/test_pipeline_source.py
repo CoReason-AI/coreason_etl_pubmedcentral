@@ -9,7 +9,7 @@
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
 from datetime import datetime, timezone
-from typing import Any, Generator
+from typing import Generator
 from unittest.mock import MagicMock, mock_open, patch
 
 import dlt
@@ -148,7 +148,7 @@ def test_pmc_xml_files_incremental_naive_datetime(mock_source_manager: MagicMock
 
     with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[]) as mock_parse:
         with patch("builtins.open", mock_open()):
-            list(fn(manifest_path, source_manager=mock_source_manager, last_updated=mock_inc))  # type: ignore[arg-type]
+            list(fn(manifest_path, source_manager=mock_source_manager, last_updated=mock_inc))
 
             # Verify cutoff passed to parse_manifest has UTC
             mock_parse.assert_called_once()
