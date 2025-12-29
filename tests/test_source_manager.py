@@ -336,3 +336,105 @@ def test_unknown_source_state(source_manager: SourceManager) -> None:
     source_manager._current_source = "INVALID"  # type: ignore
     with pytest.raises(RuntimeError, match="Unknown source state"):
         source_manager.get_file("file")
+
+# Complex Edge Cases
+
+
+def test_s3_intermittent_failures_reset_counter(source_manager: SourceManager) -> None:
+    """Verify that intermittent failures do not trigger failover if success occurs in between."""
+    error = ClientError({"Error": {"Code": "500", "Message": "Error"}}, "GetObject")
+    mock_body = io.BytesIO(b"content")
+
+    # Pattern: Fail, Fail, Success, Fail, Fail, Success
+    source_manager._s3_client.get_object.side_effect = [
+        error, error, {"Body": mock_body},
+        error, error, {"Body": mock_body}
+    ]
+
+    # 1. Fail
+    with pytest.raises(ClientError):
+        source_manager.get_file("f1")
+    assert source_manager._s3_consecutive_errors == 1
+
+    # 2. Fail
+    with pytest.raises(ClientError):
+        source_manager.get_file("f2")
+    assert source_manager._s3_consecutive_errors == 2
+
+    # 3. Success -> Should reset
+    source_manager.get_file("f3")
+    assert source_manager._s3_consecutive_errors == 0
+
+    # 4. Fail
+    with pytest.raises(ClientError):
+        source_manager.get_file("f4")
+    assert source_manager._s3_consecutive_errors == 1
+    assert source_manager._current_source == SourceType.S3
+
+
+def test_failover_persistence_explicit(source_manager: SourceManager) -> None:
+    """Verify that after failover, subsequent calls strictly use FTP."""
+    error = ClientError({"Error": {"Code": "500", "Message": "Error"}}, "GetObject")
+    source_manager._s3_client.get_object.side_effect = [error, error, error]
+
+    with patch("ftplib.FTP") as mock_ftp_cls:
+        mock_ftp = mock_ftp_cls.return_value
+
+        # Trigger failover
+        with pytest.raises(ClientError):
+            source_manager.get_file("f1")
+        with pytest.raises(ClientError):
+            source_manager.get_file("f2")
+
+        # 3rd failure triggers switch and immediate FTP fetch
+        source_manager.get_file("f3")
+        assert source_manager._current_source == SourceType.FTP
+
+        # Reset S3 mock to verify it's NOT called anymore
+        source_manager._s3_client.get_object.reset_mock()
+
+        # Subsequent calls
+        for i in range(5):
+            source_manager.get_file(f"next_{i}")
+
+        source_manager._s3_client.get_object.assert_not_called()
+        assert mock_ftp.retrbinary.call_count == 1 + 5 # 1 initial + 5 subsequent
+
+
+def test_empty_file_handling(source_manager: SourceManager) -> None:
+    """Verify handling of empty files from both sources."""
+    # S3 Empty
+    source_manager._s3_client.get_object.return_value = {"Body": io.BytesIO(b"")}
+    assert source_manager.get_file("empty_s3.xml") == b""
+
+    # FTP Empty
+    source_manager._current_source = SourceType.FTP
+    with patch("ftplib.FTP") as mock_ftp_cls:
+        mock_ftp = mock_ftp_cls.return_value
+        # retrbinary does nothing (writes nothing)
+        assert source_manager.get_file("empty_ftp.xml") == b""
+
+
+def test_ftp_timeout_during_transfer(source_manager: SourceManager) -> None:
+    """Simulate a timeout during FTP transfer and verify retry."""
+    source_manager._current_source = SourceType.FTP
+
+    with patch("ftplib.FTP") as mock_ftp_cls:
+        mock_ftp_initial = MagicMock()
+        mock_ftp_initial.voidcmd.return_value = "OK"
+        # Simulate TimeoutError (wrapped or raw)
+        mock_ftp_initial.retrbinary.side_effect = TimeoutError("Socket timed out")
+
+        mock_ftp_new = MagicMock()
+        def side_effect_success(cmd: str, callback: Any) -> None:
+            callback(b"recovered")
+        mock_ftp_new.retrbinary.side_effect = side_effect_success
+
+        source_manager._ftp = mock_ftp_initial
+        mock_ftp_cls.return_value = mock_ftp_new
+
+        data = source_manager.get_file("timeout_file")
+        assert data == b"recovered"
+
+        # Verify reconnection happened
+        mock_ftp_cls.assert_called()
