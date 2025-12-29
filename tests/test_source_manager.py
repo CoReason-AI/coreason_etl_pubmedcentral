@@ -8,25 +8,26 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
-import ftplib
 import io
+from typing import Any, Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
 from botocore.exceptions import ClientError
+
 from coreason_etl_pubmedcentral.source_manager import SourceManager, SourceType
 
 
 @pytest.fixture
-def source_manager():
-    with patch("boto3.client") as mock_boto:
+def source_manager() -> Generator[SourceManager, None, None]:
+    with patch("boto3.client"):
         sm = SourceManager()
         # Mock the s3 client instance
         sm._s3_client = MagicMock()
         yield sm
 
 
-def test_s3_success(source_manager):
+def test_s3_success(source_manager: SourceManager) -> None:
     # Setup
     mock_body = io.BytesIO(b"file content")
     source_manager._s3_client.get_object.return_value = {"Body": mock_body}
@@ -38,12 +39,10 @@ def test_s3_success(source_manager):
     assert data == b"file content"
     assert source_manager._current_source == SourceType.S3
     assert source_manager._s3_consecutive_errors == 0
-    source_manager._s3_client.get_object.assert_called_with(
-        Bucket="pmc-oa-opendata", Key="path/to/file.xml"
-    )
+    source_manager._s3_client.get_object.assert_called_with(Bucket="pmc-oa-opendata", Key="path/to/file.xml")
 
 
-def test_s3_transient_failure(source_manager):
+def test_s3_transient_failure(source_manager: SourceManager) -> None:
     # Setup
     # First call raises error, second succeeds
     error = ClientError({"Error": {"Code": "404", "Message": "Not Found"}}, "GetObject")
@@ -65,7 +64,7 @@ def test_s3_transient_failure(source_manager):
     assert source_manager._s3_consecutive_errors == 0
 
 
-def test_s3_error_propagation(source_manager):
+def test_s3_error_propagation(source_manager: SourceManager) -> None:
     # Verify errors below threshold are raised and don't switch source
     error = ClientError({"Error": {"Code": "500", "Message": "Error"}}, "GetObject")
     source_manager._s3_client.get_object.side_effect = error
@@ -77,7 +76,7 @@ def test_s3_error_propagation(source_manager):
         assert source_manager._current_source == SourceType.S3
 
 
-def test_s3_failover(source_manager):
+def test_s3_failover(source_manager: SourceManager) -> None:
     # Setup: 3 consecutive errors
     error = ClientError({"Error": {"Code": "500", "Message": "Error"}}, "GetObject")
     source_manager._s3_client.get_object.side_effect = [error, error, error]
@@ -85,8 +84,9 @@ def test_s3_failover(source_manager):
     # Mock FTP to verify it gets called immediately on the 3rd failure
     with patch("ftplib.FTP") as mock_ftp_cls:
         mock_ftp = mock_ftp_cls.return_value
+
         # Mock retrbinary to write data to the callback
-        def side_effect_retrbinary(cmd, callback):
+        def side_effect_retrbinary(cmd: str, callback: Any) -> None:
             callback(b"ftp content")
 
         mock_ftp.retrbinary.side_effect = side_effect_retrbinary
@@ -115,14 +115,16 @@ def test_s3_failover(source_manager):
         assert args[0] == "RETR /pub/pmc/f3"
 
 
-def test_ftp_direct_usage_after_failover(source_manager):
+def test_ftp_direct_usage_after_failover(source_manager: SourceManager) -> None:
     # Manually set state to FTP
     source_manager._current_source = SourceType.FTP
 
     with patch("ftplib.FTP") as mock_ftp_cls:
         mock_ftp = mock_ftp_cls.return_value
-        def side_effect_retrbinary(cmd, callback):
+
+        def side_effect_retrbinary(cmd: str, callback: Any) -> None:
             callback(b"ftp direct")
+
         mock_ftp.retrbinary.side_effect = side_effect_retrbinary
 
         data = source_manager.get_file("some/file.xml")
@@ -131,7 +133,7 @@ def test_ftp_direct_usage_after_failover(source_manager):
         mock_ftp.login.assert_called()
 
 
-def test_ftp_reconnect_on_noop_failure(source_manager):
+def test_ftp_reconnect_on_noop_failure(source_manager: SourceManager) -> None:
     source_manager._current_source = SourceType.FTP
 
     with patch("ftplib.FTP") as mock_ftp_cls:
@@ -141,8 +143,10 @@ def test_ftp_reconnect_on_noop_failure(source_manager):
 
         # New mock (will succeed)
         mock_ftp_new = MagicMock()
-        def side_effect_retrbinary(cmd, callback):
+
+        def side_effect_retrbinary(cmd: str, callback: Any) -> None:
             callback(b"reconnected data")
+
         mock_ftp_new.retrbinary.side_effect = side_effect_retrbinary
 
         # We start with _ftp populated with the initial mock
@@ -163,7 +167,7 @@ def test_ftp_reconnect_on_noop_failure(source_manager):
         mock_ftp_new.login.assert_called()
 
 
-def test_ftp_retry_on_fetch_failure(source_manager):
+def test_ftp_retry_on_fetch_failure(source_manager: SourceManager) -> None:
     source_manager._current_source = SourceType.FTP
 
     with patch("ftplib.FTP") as mock_ftp_cls:
@@ -174,8 +178,10 @@ def test_ftp_retry_on_fetch_failure(source_manager):
 
         # New mock: succeeds
         mock_ftp_new = MagicMock()
-        def side_effect_retrbinary_success(cmd, callback):
+
+        def side_effect_retrbinary_success(cmd: str, callback: Any) -> None:
             callback(b"retry data")
+
         mock_ftp_new.retrbinary.side_effect = side_effect_retrbinary_success
 
         source_manager._ftp = mock_ftp_initial
@@ -195,7 +201,7 @@ def test_ftp_retry_on_fetch_failure(source_manager):
         mock_ftp_new.login.assert_called()
 
 
-def test_close(source_manager):
+def test_close(source_manager: SourceManager) -> None:
     mock_ftp = MagicMock()
     source_manager._ftp = mock_ftp
     source_manager.close()
@@ -203,7 +209,7 @@ def test_close(source_manager):
     assert source_manager._ftp is None
 
 
-def test_ftp_connection_failure(source_manager):
+def test_ftp_connection_failure(source_manager: SourceManager) -> None:
     source_manager._current_source = SourceType.FTP
 
     with patch("ftplib.FTP") as mock_ftp_cls:
@@ -216,7 +222,7 @@ def test_ftp_connection_failure(source_manager):
         assert source_manager._ftp is None
 
 
-def test_ftp_reconnect_failure(source_manager):
+def test_ftp_reconnect_failure(source_manager: SourceManager) -> None:
     """Test when reconnecting after a fetch failure also fails."""
     source_manager._current_source = SourceType.FTP
 
@@ -242,7 +248,7 @@ def test_ftp_reconnect_failure(source_manager):
             source_manager.get_file("file")
 
 
-def test_ftp_reconnect_success_but_second_fetch_fails(source_manager):
+def test_ftp_reconnect_success_but_second_fetch_fails(source_manager: SourceManager) -> None:
     """Test when we reconnect successfully, but the retry fetch also fails."""
     source_manager._current_source = SourceType.FTP
 
@@ -261,7 +267,7 @@ def test_ftp_reconnect_success_but_second_fetch_fails(source_manager):
         assert str(exc.value) == "Lost 2"
 
 
-def test_ftp_close_exception(source_manager):
+def test_ftp_close_exception(source_manager: SourceManager) -> None:
     """Verify exceptions during close are swallowed."""
     mock_ftp = MagicMock()
     mock_ftp.quit.side_effect = EOFError("Quit failed")
@@ -274,7 +280,8 @@ def test_ftp_close_exception(source_manager):
 
     assert source_manager._ftp is None
 
-def test_ensure_ftp_connection_failure_handling(source_manager):
+
+def test_ensure_ftp_connection_failure_handling(source_manager: SourceManager) -> None:
     """Verify handling when _ensure_ftp_connection fails to set _ftp."""
     source_manager._current_source = SourceType.FTP
 
@@ -301,7 +308,7 @@ def test_ensure_ftp_connection_failure_handling(source_manager):
         source_manager.get_file("file")
 
 
-def test_ftp_reconnect_returns_none_silent_failure(source_manager):
+def test_ftp_reconnect_returns_none_silent_failure(source_manager: SourceManager) -> None:
     """
     Cover line 129: if not self._ftp: raise e.
     This requires _ensure_ftp_connection to return successfully but _ftp to be None.
@@ -325,8 +332,8 @@ def test_ftp_reconnect_returns_none_silent_failure(source_manager):
     assert str(exc.value) == "Initial Failure"
 
 
-def test_unknown_source_state(source_manager):
+def test_unknown_source_state(source_manager: SourceManager) -> None:
     """Cover the unreachable state error."""
-    source_manager._current_source = "INVALID"
+    source_manager._current_source = "INVALID"  # type: ignore
     with pytest.raises(RuntimeError, match="Unknown source state"):
         source_manager.get_file("file")

@@ -42,9 +42,7 @@ class SourceManager:
 
         # S3 Client (Lazy init? No, lightweight enough to init here or on first use)
         # Using unsigned config for public bucket
-        self._s3_client = boto3.client(
-            "s3", config=Config(signature_version=UNSIGNED)
-        )
+        self._s3_client = boto3.client("s3", config=Config(signature_version=UNSIGNED))
 
         # FTP Client state
         self._ftp: Optional[ftplib.FTP] = None
@@ -65,8 +63,7 @@ class SourceManager:
                 # (e.g. EndpointConnectionError)
                 self._s3_consecutive_errors += 1
                 logger.warning(
-                    f"S3 Error ({self._s3_consecutive_errors}/{self.FAILOVER_THRESHOLD}) "
-                    f"fetching {file_path}: {e}"
+                    f"S3 Error ({self._s3_consecutive_errors}/{self.FAILOVER_THRESHOLD}) fetching {file_path}: {e}"
                 )
 
                 if self._s3_consecutive_errors >= self.FAILOVER_THRESHOLD:
@@ -108,7 +105,7 @@ class SourceManager:
         """
         self._ensure_ftp_connection()
         if not self._ftp:
-             raise RuntimeError("FTP connection could not be established.")
+            raise RuntimeError("FTP connection could not be established.")
 
         # Full path on FTP: /pub/pmc/ + file_path
         # file_path e.g. "oa_comm/xml/PMC12345.xml"
@@ -127,7 +124,7 @@ class SourceManager:
             if not self._ftp:
                 raise e
             # Retry fetch
-            bio = io.BytesIO() # Reset buffer
+            bio = io.BytesIO()  # Reset buffer
             self._ftp.retrbinary(f"RETR {full_path}", bio.write)
 
         return bio.getvalue()
