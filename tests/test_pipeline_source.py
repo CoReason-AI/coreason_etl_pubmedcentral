@@ -9,7 +9,7 @@
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
 from datetime import datetime, timezone
-from typing import Generator
+from typing import Any, Generator
 from unittest.mock import MagicMock, mock_open, patch
 
 import dlt
@@ -138,7 +138,7 @@ def test_pmc_xml_files_incremental_naive_datetime(mock_source_manager: MagicMock
     # This should trigger line 66 (replace tzinfo).
 
     manifest_path = "dummy_manifest.csv"
-    start_time_naive = datetime(2024, 1, 1, 10, 0, 0) # No tzinfo
+    start_time_naive = datetime(2024, 1, 1, 10, 0, 0)  # No tzinfo
 
     mock_inc = MagicMock()
     mock_inc.start_value = start_time_naive
@@ -148,7 +148,7 @@ def test_pmc_xml_files_incremental_naive_datetime(mock_source_manager: MagicMock
 
     with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[]) as mock_parse:
         with patch("builtins.open", mock_open()):
-            list(fn(manifest_path, source_manager=mock_source_manager, last_updated=mock_inc))
+            list(fn(manifest_path, source_manager=mock_source_manager, last_updated=mock_inc))  # type: ignore[arg-type]
 
             # Verify cutoff passed to parse_manifest has UTC
             mock_parse.assert_called_once()
@@ -209,7 +209,7 @@ def test_manifest_file_not_found(mock_source_manager: MagicMock) -> None:
     # dlt wraps exceptions in ResourceExtractionError
     with patch("builtins.open", side_effect=FileNotFoundError):
         with pytest.raises(ResourceExtractionError) as excinfo:
-             list(pmc_xml_files("missing.csv", source_manager=mock_source_manager))
+            list(pmc_xml_files("missing.csv", source_manager=mock_source_manager))
 
         # Verify the underlying cause
         assert isinstance(excinfo.value.__cause__, FileNotFoundError)
