@@ -1,0 +1,92 @@
+<root>
+    <!-- Complex: Nested Text -->
+    <article id="nested">
+        <front>
+            <article-meta>
+                <funding-group>
+                    <award-group>
+                        <funding-source>Agency with <italic>Italic</italic> and <sup>Sup</sup></funding-source>
+                        <award-id>ID <bold>Bold</bold></award-id>
+                    </award-group>
+                </funding-group>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- Complex: Namespaces -->
+    <article id="namespaces" xmlns:ns="http://example.org/ns">
+        <front>
+            <article-meta>
+                <ns:funding-group>
+                    <ns:award-group>
+                        <ns:funding-source>Namespaced Agency</ns:funding-source>
+                        <ns:award-id>NS-123</ns:award-id>
+                    </ns:award-group>
+                </ns:funding-group>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- Complex: Multiple Sources/IDs (Cross Product) -->
+    <article id="multiple">
+        <front>
+            <article-meta>
+                <funding-group>
+                    <award-group>
+                        <funding-source>Agency A</funding-source>
+                        <funding-source>Agency B</funding-source>
+                        <award-id>Grant 1</award-id>
+                        <award-id>Grant 2</award-id>
+                    </award-group>
+                </funding-group>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- Complex: Whitespace -->
+    <article id="whitespace">
+        <front>
+            <article-meta>
+                <funding-group>
+                    <award-group>
+                        <funding-source>
+                            Agency
+                            Multiline
+                        </funding-source>
+                        <award-id>
+                            ID-Multiline
+                        </award-id>
+                    </award-group>
+                </funding-group>
+            </article-meta>
+        </front>
+    </article>
+
+     <!-- Complex: Only Sources (Multiple) -->
+    <article id="only_sources">
+        <front>
+            <article-meta>
+                <funding-group>
+                    <award-group>
+                        <funding-source>Source X</funding-source>
+                        <funding-source>Source Y</funding-source>
+                    </award-group>
+                </funding-group>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- Complex: Only IDs (Multiple) -->
+    <article id="only_ids">
+        <front>
+            <article-meta>
+                <funding-group>
+                    <award-group>
+                        <award-id>ID X</award-id>
+                        <award-id>ID Y</award-id>
+                    </award-group>
+                </funding-group>
+            </article-meta>
+        </front>
+    </article>
+</root>

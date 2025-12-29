@@ -1,0 +1,63 @@
+<root>
+    <!-- Modern JATS -->
+    <article id="modern">
+        <front>
+            <article-meta>
+                <funding-group>
+                    <award-group>
+                        <funding-source>National Institutes of Health</funding-source>
+                        <award-id>R01-12345</award-id>
+                    </award-group>
+                    <award-group>
+                        <funding-source>NSF</funding-source>
+                        <!-- No award ID -->
+                    </award-group>
+                    <award-group>
+                        <!-- No source -->
+                        <award-id>G-999</award-id>
+                    </award-group>
+                </funding-group>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- Legacy JATS -->
+    <article id="legacy">
+        <front>
+            <article-meta>
+                <contract-sponsor>Pfizer</contract-sponsor>
+                <contract-num>CN-1001</contract-num>
+                <contract-sponsor>Moderna</contract-sponsor>
+                <!-- Unpaired or independent -->
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- Mixed JATS -->
+    <article id="mixed">
+        <front>
+            <article-meta>
+                <funding-group>
+                    <award-group>
+                        <funding-source>Wellcome Trust</funding-source>
+                        <award-id>WT-555</award-id>
+                    </award-group>
+                </funding-group>
+                <contract-sponsor>Gates Foundation</contract-sponsor>
+            </article-meta>
+        </front>
+    </article>
+
+    <!-- Edge Cases -->
+    <article id="empty">
+        <front>
+            <article-meta>
+                <funding-group>
+                    <award-group>
+                        <!-- Empty award group -->
+                    </award-group>
+                </funding-group>
+            </article-meta>
+        </front>
+    </article>
+</root>

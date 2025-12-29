@@ -40,6 +40,11 @@ class ArticleAuthor(NamedTuple):
     affiliations: list[str]
 
 
+class ArticleFunding(NamedTuple):
+    agency: Optional[str]
+    grant_id: Optional[str]
+
+
 def _get_text(element: etree._Element, xpath_query: str) -> Optional[str]:
     """Helper to safely get text from an element using xpath."""
     nodes = element.xpath(xpath_query)
@@ -286,3 +291,69 @@ def parse_article_authors(article_element: etree._Element) -> list[ArticleAuthor
         authors.append(ArticleAuthor(surname=surname, given_names=given_names, affiliations=affiliations))
 
     return authors
+
+
+def parse_article_funding(article_element: etree._Element) -> list[ArticleFunding]:
+    """
+    Parses funding information from a JATS XML article.
+    Handles both Modern JATS (funding-group/award-group) and Legacy JATS (article-meta/contract-*).
+
+    Args:
+        article_element: The root <article> element.
+
+    Returns:
+        List of ArticleFunding objects containing agency and grant_id.
+    """
+    funding_list: list[ArticleFunding] = []
+
+    # 1. Modern JATS: //funding-group/award-group
+    award_groups = article_element.xpath(".//*[local-name()='funding-group']/*[local-name()='award-group']")
+    for group in award_groups:
+        # Extract ALL agencies
+        agencies: list[str] = []
+        sources = group.xpath(".//*[local-name()='funding-source']")
+        for source in sources:
+            text = _get_full_text(source)
+            if text:
+                agencies.append(text)
+
+        # Extract ALL grant IDs
+        grant_ids: list[str] = []
+        ids = group.xpath(".//*[local-name()='award-id']")
+        for aid in ids:
+            text = _get_full_text(aid)
+            if text:
+                grant_ids.append(text)
+
+        # Cross Product Logic: Link every Agency to every Grant ID
+        if agencies and grant_ids:
+            for agency in agencies:
+                for gid in grant_ids:
+                    funding_list.append(ArticleFunding(agency=agency, grant_id=gid))
+        elif agencies:
+            # Agencies but no IDs
+            for agency in agencies:
+                funding_list.append(ArticleFunding(agency=agency, grant_id=None))
+        elif grant_ids:
+            # IDs but no Agencies
+            for gid in grant_ids:
+                funding_list.append(ArticleFunding(agency=None, grant_id=gid))
+
+    # 2. Legacy JATS: //article-meta/contract-sponsor and //article-meta/contract-num
+    # Treated as independent signals if not grouped.
+
+    # Process Contract Sponsors (Agency only)
+    sponsors = article_element.xpath(".//*[local-name()='article-meta']/*[local-name()='contract-sponsor']")
+    for node in sponsors:
+        text = _get_full_text(node)
+        if text:
+            funding_list.append(ArticleFunding(agency=text, grant_id=None))
+
+    # Process Contract Numbers (Grant ID only)
+    nums = article_element.xpath(".//*[local-name()='article-meta']/*[local-name()='contract-num']")
+    for node in nums:
+        text = _get_full_text(node)
+        if text:
+            funding_list.append(ArticleFunding(agency=None, grant_id=text))
+
+    return funding_list
