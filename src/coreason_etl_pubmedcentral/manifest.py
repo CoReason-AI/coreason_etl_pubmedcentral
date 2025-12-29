@@ -24,9 +24,7 @@ class ManifestRecord:
     is_retracted: bool
 
 
-def parse_manifest(
-    lines: Iterator[str], last_ingested_cutoff: Optional[datetime] = None
-) -> Iterator[ManifestRecord]:
+def parse_manifest(lines: Iterator[str], last_ingested_cutoff: Optional[datetime] = None) -> Iterator[ManifestRecord]:
     """
     Parses the PMC OA filelist CSV and yields ManifestRecord objects.
 
@@ -48,7 +46,7 @@ def parse_manifest(
     # Or strict adherence: The schema lists "Column Name" in the spec, implying a header.
     # We'll assume the first row is a header.
     try:
-        header = next(reader)
+        _ = next(reader)
     except StopIteration:
         return
 
@@ -59,7 +57,7 @@ def parse_manifest(
     # If the first column of header is not "File Path" (or similar), we might log a warning?
     # For now, blindly skip first row.
 
-    for row_idx, row in enumerate(reader, start=2):
+    for _, row in enumerate(reader, start=2):
         if not row:
             continue
 

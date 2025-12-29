@@ -12,7 +12,8 @@ from datetime import datetime, timezone
 from typing import Iterator
 
 import pytest
-from coreason_etl_pubmedcentral.manifest import ManifestRecord, parse_manifest
+
+from coreason_etl_pubmedcentral.manifest import parse_manifest
 
 
 @pytest.fixture  # type: ignore
