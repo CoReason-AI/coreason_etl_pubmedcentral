@@ -337,6 +337,7 @@ def test_unknown_source_state(source_manager: SourceManager) -> None:
     with pytest.raises(RuntimeError, match="Unknown source state"):
         source_manager.get_file("file")
 
+
 # Complex Edge Cases
 
 
@@ -347,8 +348,12 @@ def test_s3_intermittent_failures_reset_counter(source_manager: SourceManager) -
 
     # Pattern: Fail, Fail, Success, Fail, Fail, Success
     source_manager._s3_client.get_object.side_effect = [
-        error, error, {"Body": mock_body},
-        error, error, {"Body": mock_body}
+        error,
+        error,
+        {"Body": mock_body},
+        error,
+        error,
+        {"Body": mock_body},
     ]
 
     # 1. Fail
@@ -398,7 +403,7 @@ def test_failover_persistence_explicit(source_manager: SourceManager) -> None:
             source_manager.get_file(f"next_{i}")
 
         source_manager._s3_client.get_object.assert_not_called()
-        assert mock_ftp.retrbinary.call_count == 1 + 5 # 1 initial + 5 subsequent
+        assert mock_ftp.retrbinary.call_count == 1 + 5  # 1 initial + 5 subsequent
 
 
 def test_empty_file_handling(source_manager: SourceManager) -> None:
@@ -409,8 +414,7 @@ def test_empty_file_handling(source_manager: SourceManager) -> None:
 
     # FTP Empty
     source_manager._current_source = SourceType.FTP
-    with patch("ftplib.FTP") as mock_ftp_cls:
-        mock_ftp = mock_ftp_cls.return_value
+    with patch("ftplib.FTP"):
         # retrbinary does nothing (writes nothing)
         assert source_manager.get_file("empty_ftp.xml") == b""
 
@@ -426,8 +430,10 @@ def test_ftp_timeout_during_transfer(source_manager: SourceManager) -> None:
         mock_ftp_initial.retrbinary.side_effect = TimeoutError("Socket timed out")
 
         mock_ftp_new = MagicMock()
+
         def side_effect_success(cmd: str, callback: Any) -> None:
             callback(b"recovered")
+
         mock_ftp_new.retrbinary.side_effect = side_effect_success
 
         source_manager._ftp = mock_ftp_initial
