@@ -289,17 +289,19 @@ def test_pmc_xml_files_utf8_decode_error(mock_source_manager: MagicMock) -> None
     record = ManifestRecord("bad_enc.xml", "PMC1", datetime.now(timezone.utc), None, "CC0", False)
 
     # Return invalid utf-8
-    mock_source_manager.get_file.return_value = b"\xff\xfe\x00\x00" # UTF-32 BOM or garbage
+    mock_source_manager.get_file.return_value = b"\xff\xfe\x00\x00"  # UTF-32 BOM or garbage
 
     with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[record]):
         with patch("builtins.open", mock_open()):
-             with patch("coreason_etl_pubmedcentral.pipeline_source.logger") as mock_logger:
+            with patch("coreason_etl_pubmedcentral.pipeline_source.logger") as mock_logger:
                 inc = dlt.sources.incremental("last_updated")
                 items = list(pmc_xml_files("path.csv", source_manager=mock_source_manager, last_updated=inc))
 
                 assert len(items) == 0
                 mock_logger.error.assert_called()
-                assert "UnicodeDecodeError" in str(mock_logger.error.call_args) or "codec" in str(mock_logger.error.call_args)
+                assert "UnicodeDecodeError" in str(mock_logger.error.call_args) or "codec" in str(
+                    mock_logger.error.call_args
+                )
 
 
 def test_pmc_xml_files_source_change_tracking(mock_source_manager: MagicMock) -> None:
