@@ -8,15 +8,10 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
-import os
-import sys
-
-from loguru import logger
-
-logger.remove()
-logger.add(sys.stderr, level=os.getenv("LOG_LEVEL", "INFO"))
+from coreason_etl_pubmedcentral.utils.logger import logger
 
 
+@logger.catch
 def hello_world() -> str:
     logger.info("Hello World!")
     return "Hello World!"

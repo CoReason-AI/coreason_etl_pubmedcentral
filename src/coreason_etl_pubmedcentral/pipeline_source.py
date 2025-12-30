@@ -14,9 +14,9 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 import dlt
-from loguru import logger
 
 from coreason_etl_pubmedcentral.manifest import parse_manifest
+from coreason_etl_pubmedcentral.utils.logger import logger
 from coreason_etl_pubmedcentral.source_manager import SourceManager
 
 
@@ -73,6 +73,8 @@ def pmc_xml_files(
     try:
         with open(manifest_file_path, "r", encoding="utf-8") as f:
             for record in parse_manifest(f, last_ingested_cutoff=last_ingested_cutoff):
+                # Bind context to the logger for better traceability
+                context_logger = logger.bind(file_path=record.file_path)
                 try:
                     # Fetch file content
                     content_bytes = source_manager.get_file(record.file_path)
@@ -95,7 +97,7 @@ def pmc_xml_files(
                     }
 
                 except Exception as e:
-                    logger.error(f"Failed to ingest file {record.file_path}: {e}")
+                    context_logger.exception(f"Failed to ingest file {record.file_path}")
                     pass
 
     except FileNotFoundError:
