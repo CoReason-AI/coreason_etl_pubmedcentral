@@ -17,9 +17,11 @@ from lxml import etree
 from coreason_etl_pubmedcentral.parsing.parser import (
     ArticleType,
     parse_article_authors,
+    parse_article_content,
     parse_article_dates,
     parse_article_funding,
     parse_article_identity,
+    parse_article_keywords,
 )
 
 
@@ -51,6 +53,11 @@ def funding_data_path() -> str:
 @pytest.fixture  # type: ignore
 def funding_complex_data_path() -> str:
     return os.path.join(os.path.dirname(__file__), "data", "jats_funding_complex.xml")
+
+
+@pytest.fixture  # type: ignore
+def content_data_path() -> str:
+    return os.path.join(os.path.dirname(__file__), "data", "jats_content_sample.xml")
 
 
 @pytest.fixture  # type: ignore
@@ -99,6 +106,13 @@ def funding_articles(funding_data_path: str) -> Generator[list[etree._Element], 
 @pytest.fixture  # type: ignore
 def funding_complex_articles(funding_complex_data_path: str) -> Generator[list[etree._Element], None, None]:
     tree = etree.parse(funding_complex_data_path)
+    root = tree.getroot()
+    yield root.xpath("//*[local-name()='article']")
+
+
+@pytest.fixture  # type: ignore
+def content_articles(content_data_path: str) -> Generator[list[etree._Element], None, None]:
+    tree = etree.parse(content_data_path)
     root = tree.getroot()
     yield root.xpath("//*[local-name()='article']")
 
@@ -637,3 +651,51 @@ def test_parse_funding_only_ids(funding_complex_articles: list[etree._Element]) 
     ids = sorted([f.grant_id for f in funding if f.grant_id])
     assert ids == ["ID X", "ID Y"]
     assert all(f.agency is None for f in funding)
+
+
+def test_parse_content_full(content_articles: list[etree._Element]) -> None:
+    # Article 1: Full content
+    article = content_articles[0]
+    content = parse_article_content(article)
+    keywords = parse_article_keywords(article)
+
+    assert content.title == "Test Article Title"  # "Article" is italic in XML
+    assert "test abstract" in content.abstract  # type: ignore
+    assert "Background" in content.abstract  # type: ignore
+    assert content.journal_name == "Journal of Testing"
+
+    assert len(keywords) == 4
+    assert "keyword1" in keywords
+    assert "keyword two" in keywords
+    assert "Subject A" in keywords
+    assert "Subject B" in keywords
+
+
+def test_parse_content_minimal(content_articles: list[etree._Element]) -> None:
+    # Article 2: Minimal content
+    article = content_articles[1]
+    content = parse_article_content(article)
+    keywords = parse_article_keywords(article)
+
+    assert content.title is None
+    assert content.abstract is None
+    assert content.journal_name is None
+    assert keywords == []
+
+
+def test_parse_content_complex(content_articles: list[etree._Element]) -> None:
+    # Article 3: Complex/Edge cases
+    article = content_articles[2]
+    content = parse_article_content(article)
+    keywords = parse_article_keywords(article)
+
+    # Title with nested bold tag
+    assert content.title == "Bold Title"
+    # Abstract with paragraphs
+    assert "Para 1" in content.abstract  # type: ignore
+    assert "Para 2" in content.abstract  # type: ignore
+    # Journal
+    assert content.journal_name == "Complex Journal"
+    # Keywords from multiple groups
+    assert "author-kw1" in keywords
+    assert "kw2" in keywords

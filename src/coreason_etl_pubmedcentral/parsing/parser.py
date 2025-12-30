@@ -45,6 +45,12 @@ class ArticleFunding(NamedTuple):
     grant_id: Optional[str]
 
 
+class ArticleContent(NamedTuple):
+    title: Optional[str]
+    abstract: Optional[str]
+    journal_name: Optional[str]
+
+
 def _get_text(element: etree._Element, xpath_query: str) -> Optional[str]:
     """Helper to safely get text from an element using xpath."""
     nodes = element.xpath(xpath_query)
@@ -357,3 +363,80 @@ def parse_article_funding(article_element: etree._Element) -> list[ArticleFundin
             funding_list.append(ArticleFunding(agency=None, grant_id=text))
 
     return funding_list
+
+
+def parse_article_content(article_element: etree._Element) -> ArticleContent:
+    """
+    Parses textual content (Title, Abstract, Journal Name) from a JATS XML article.
+
+    Args:
+        article_element: The root <article> element.
+
+    Returns:
+        ArticleContent containing title, abstract, journal_name.
+    """
+    # 1. Title
+    # Target: //article-meta/title-group/article-title
+    title: Optional[str] = None
+    title_nodes = article_element.xpath(
+        ".//*[local-name()='article-meta']/*[local-name()='title-group']/*[local-name()='article-title']"
+    )
+    if title_nodes:
+        # Extract full text including children (italic, bold, etc)
+        text = _get_full_text(title_nodes[0])
+        if text:
+            title = text
+
+    # 2. Abstract
+    # Target: //article-meta/abstract
+    abstract: Optional[str] = None
+    abstract_nodes = article_element.xpath(".//*[local-name()='article-meta']/*[local-name()='abstract']")
+    if abstract_nodes:
+        text = _get_full_text(abstract_nodes[0])
+        if text:
+            abstract = text
+
+    # 3. Journal Name
+    # Target: //journal-meta/journal-title-group/journal-title
+    journal_name: Optional[str] = None
+    journal_nodes = article_element.xpath(
+        ".//*[local-name()='journal-meta']/*[local-name()='journal-title-group']/*[local-name()='journal-title']"
+    )
+    if journal_nodes:
+        text = _get_full_text(journal_nodes[0])
+        if text:
+            journal_name = text
+
+    return ArticleContent(title=title, abstract=abstract, journal_name=journal_name)
+
+
+def parse_article_keywords(article_element: etree._Element) -> list[str]:
+    """
+    Parses keywords from a JATS XML article.
+    Aggregates from //kwd-group/kwd and //article-categories/subj-group/subject.
+
+    Args:
+        article_element: The root <article> element.
+
+    Returns:
+        List of strings representing all keywords found.
+    """
+    keywords: list[str] = []
+
+    # 1. kdw-group/kwd
+    kwds = article_element.xpath(".//*[local-name()='kwd-group']/*[local-name()='kwd']")
+    for node in kwds:
+        text = _get_full_text(node)
+        if text:
+            keywords.append(text)
+
+    # 2. article-categories/subj-group/subject
+    subjects = article_element.xpath(
+        ".//*[local-name()='article-categories']/*[local-name()='subj-group']/*[local-name()='subject']"
+    )
+    for node in subjects:
+        text = _get_full_text(node)
+        if text:
+            keywords.append(text)
+
+    return keywords
