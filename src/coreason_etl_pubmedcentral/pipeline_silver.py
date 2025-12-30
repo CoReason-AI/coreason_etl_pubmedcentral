@@ -82,15 +82,11 @@ def transform_silver_record(item: dict[str, Any]) -> Optional[dict[str, Any]]:
 
                 if not content.title:
                     pmcid_log = identity.pmcid or "unknown"
-                    context_logger.warning(
-                        f"SchemaViolation - Article {pmcid_log} missing mandatory 'title' field."
-                    )
+                    context_logger.warning(f"SchemaViolation - Article {pmcid_log} missing mandatory 'title' field.")
 
                 if is_retracted_manifest:
                     pmcid_log = identity.pmcid or "unknown"
-                    context_logger.info(
-                        f"RetractionFound - Marking {pmcid_log} as retracted based on manifest."
-                    )
+                    context_logger.info(f"RetractionFound - Marking {pmcid_log} as retracted based on manifest.")
 
                 # Construct Silver Record
                 parsed_record = {

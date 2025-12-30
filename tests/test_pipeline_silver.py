@@ -19,7 +19,7 @@ from coreason_etl_pubmedcentral.pipeline_silver import _pmc_silver_generator, tr
 from coreason_etl_pubmedcentral.utils.logger import logger
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def log_capture() -> Any:
     """Captures loguru logs."""
     logs = []
@@ -106,7 +106,9 @@ def test_transform_silver_record_success(sample_bronze_record: dict[str, Any]) -
     assert record["manifest_metadata"]["accession_id"] == "PMC12345"
 
 
-def test_transform_silver_record_retraction_logging(sample_bronze_record: dict[str, Any], log_capture: list[str]) -> None:
+def test_transform_silver_record_retraction_logging(
+    sample_bronze_record: dict[str, Any], log_capture: list[str]
+) -> None:
     # Set retracted = True in manifest
     sample_bronze_record["manifest_metadata"]["is_retracted"] = True
 
@@ -119,7 +121,9 @@ def test_transform_silver_record_retraction_logging(sample_bronze_record: dict[s
     assert any("RetractionFound - Marking 12345 as retracted based on manifest." in msg for msg in log_capture)
 
 
-def test_transform_silver_record_schema_violation_logging(sample_bronze_record: dict[str, Any], log_capture: list[str]) -> None:
+def test_transform_silver_record_schema_violation_logging(
+    sample_bronze_record: dict[str, Any], log_capture: list[str]
+) -> None:
     # Remove Title
     # XML without title-group
     xml = """
