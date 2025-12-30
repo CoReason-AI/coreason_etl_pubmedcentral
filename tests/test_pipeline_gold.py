@@ -207,3 +207,106 @@ def test_gold_generator() -> None:
         # Verify logs? (Optional, requires capturing logs)
         # Verify calls
         assert mock_transform.call_count == 3
+
+
+def test_gold_complex_unicode_and_special_chars() -> None:
+    """Test transformation with Unicode and special characters."""
+    rec: dict[str, Any] = {
+        "pmcid": "123",
+        "title": "Title with üñîçødę",
+        "authors": [
+            {"surname": "Müller", "given_names": "Jürgen", "affiliations": ["Universität München"]},
+            {"surname": "O'Connor", "given_names": "Renée", "affiliations": []},
+        ],
+        "funding": [{"agency": "Fünding Agency €", "grant_id": "GR#123&456"}],
+    }
+
+    gold = transform_gold_record(rec)
+    assert gold is not None
+
+    assert gold["title"] == "Title with üñîçødę"
+    assert "Müller Jürgen" in gold["authors_display"]
+    assert "O'Connor Renée" in gold["authors_display"]
+    assert "Universität München" in gold["affiliations_text"]
+    assert "Fünding Agency €" in gold["agency_names"]
+    assert "GR#123&456" in gold["grant_ids"]
+
+
+def test_gold_deduplication_logic() -> None:
+    """Verify strictly that duplicates are removed."""
+    rec: dict[str, Any] = {
+        "pmcid": "123",
+        "authors": [
+            {"surname": "A", "given_names": "B", "affiliations": ["U1", "U1", "U2"]},  # Duplicate in list
+            {"surname": "C", "given_names": "D", "affiliations": ["U2", "U3"]},  # Overlap
+        ],
+        "funding": [
+            {"agency": "A1", "grant_id": "G1"},
+            {"agency": "A1", "grant_id": "G1"},  # Exact Duplicate
+            {"agency": "A2", "grant_id": "G1"},  # Same grant, diff agency
+        ],
+    }
+
+    gold = transform_gold_record(rec)
+    assert gold is not None
+
+    # U1, U2, U3 -> 3 unique
+    assert len(gold["affiliations_text"]) == 3
+    assert set(gold["affiliations_text"]) == {"U1", "U2", "U3"}
+
+    # Agencies: A1, A2
+    assert set(gold["agency_names"]) == {"A1", "A2"}
+    # Grants: G1
+    assert set(gold["grant_ids"]) == {"G1"}
+
+
+def test_gold_date_edge_cases() -> None:
+    """Test robust date parsing edge cases."""
+    # 1. Just Year
+    rec1 = {"date_published": "2024"}
+    res1 = transform_gold_record(rec1)
+    assert res1["pub_year"] == 2024  # type: ignore
+
+    # 2. Year Month
+    rec2 = {"date_published": "2024-05"}
+    res2 = transform_gold_record(rec2)
+    assert res2["pub_year"] == 2024  # type: ignore
+
+    # 3. Full ISO
+    rec3 = {"date_published": "2024-05-15T12:00:00"}
+    res3 = transform_gold_record(rec3)
+    assert res3["pub_year"] == 2024  # type: ignore
+
+    # 4. Bad String
+    rec4 = {"date_published": "NotADate"}
+    res4 = transform_gold_record(rec4)
+    assert res4["pub_year"] is None  # type: ignore
+
+
+def test_gold_robust_null_handling() -> None:
+    """Test robust handling of partial or null objects in lists."""
+    rec: dict[str, Any] = {
+        "pmcid": "123",
+        "authors": [
+            {"surname": None, "given_names": None, "affiliations": [None, ""]},  # Should be ignored/empty
+            {"surname": "Valid", "given_names": None, "affiliations": ["U1"]},
+        ],
+        "funding": [
+            {"agency": None, "grant_id": None},  # Should be ignored
+            {"agency": "", "grant_id": ""},  # Should be ignored
+            {"agency": "A1", "grant_id": None},
+        ],
+        "keywords": [None, ""],  # If keywords allows this? logic is simple pass through usually
+    }
+
+    gold = transform_gold_record(rec)
+    assert gold is not None
+
+    # Authors display should just be "Valid"
+    assert gold["authors_display"] == "Valid"
+    # Affiliations: U1 (None and "" ignored)
+    assert gold["affiliations_text"] == ["U1"]
+    # Agencies: A1
+    assert gold["agency_names"] == ["A1"]
+    # Grant IDs: Empty
+    assert gold["grant_ids"] == []
