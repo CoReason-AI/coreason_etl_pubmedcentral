@@ -78,15 +78,21 @@ def test_gold_commercial_safe_logic() -> None:
 
     # Case 1: oa_comm
     rec1 = {"ingestion_metadata": {"source_file_path": "oa_comm/xml/file.xml"}}
-    assert transform_gold_record(rec1)["is_commercial_safe"] is True  # type: ignore
+    result1 = transform_gold_record(rec1)
+    assert result1 is not None
+    assert result1["is_commercial_safe"] is True
 
     # Case 2: oa_noncomm
     rec2 = {"ingestion_metadata": {"source_file_path": "oa_noncomm/xml/file.xml"}}
-    assert transform_gold_record(rec2)["is_commercial_safe"] is False  # type: ignore
+    result2 = transform_gold_record(rec2)
+    assert result2 is not None
+    assert result2["is_commercial_safe"] is False
 
     # Case 3: Unknown/Other
     rec3 = {"ingestion_metadata": {"source_file_path": "random/path.xml"}}
-    assert transform_gold_record(rec3)["is_commercial_safe"] is False  # type: ignore
+    result3 = transform_gold_record(rec3)
+    assert result3 is not None
+    assert result3["is_commercial_safe"] is False
 
 
 def test_gold_date_parsing() -> None:
@@ -94,19 +100,27 @@ def test_gold_date_parsing() -> None:
 
     # Case 1: Valid YYYY-MM-DD
     rec1 = {"date_published": "2023-12-31"}
-    assert transform_gold_record(rec1)["pub_year"] == 2023  # type: ignore
+    result1 = transform_gold_record(rec1)
+    assert result1 is not None
+    assert result1["pub_year"] == 2023
 
     # Case 2: Missing Date
     rec2: dict[str, Any] = {}
-    assert transform_gold_record(rec2)["pub_year"] is None
+    result2 = transform_gold_record(rec2)
+    assert result2 is not None
+    assert result2["pub_year"] is None
 
     # Case 3: Invalid Date Format
     rec3 = {"date_published": "invalid-date"}
-    assert transform_gold_record(rec3)["pub_year"] is None  # type: ignore
+    result3 = transform_gold_record(rec3)
+    assert result3 is not None
+    assert result3["pub_year"] is None
 
     # Case 4: None
     rec4 = {"date_published": None}
-    assert transform_gold_record(rec4)["pub_year"] is None  # type: ignore
+    result4 = transform_gold_record(rec4)
+    assert result4 is not None
+    assert result4["pub_year"] is None
 
 
 def test_gold_authors_affiliations() -> None:
@@ -175,7 +189,7 @@ def test_gold_generator() -> None:
     # We patch transform_gold_record to raise exception for item 2
     with patch("coreason_etl_pubmedcentral.pipeline_gold.transform_gold_record") as mock_transform:
 
-        def side_effect(item):
+        def side_effect(item: dict[str, Any]) -> dict[str, Any]:
             if item["pmcid"] == "2":
                 raise ValueError("Bang!")
             return {"pmcid": item["pmcid"], "title": item["title"], "transformed": True}
