@@ -18,7 +18,7 @@ from lxml import etree
 from coreason_etl_pubmedcentral.pipeline_silver import _pmc_silver_generator, transform_silver_record
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def sample_xml_content() -> str:
     """Returns a valid JATS XML string for testing."""
     return """
@@ -47,7 +47,7 @@ def sample_xml_content() -> str:
     """
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def sample_bronze_record(sample_xml_content: str) -> dict[str, Any]:
     return {
         "source_file_path": "oa_comm/xml/PMC12345.xml",
@@ -175,7 +175,7 @@ def test_pmc_silver_generator_iteration(sample_bronze_record: dict[str, Any]) ->
 
     items = [sample_bronze_record, bad_record, sample_bronze_record]
 
-    results = list(_pmc_silver_generator(items))
+    results = list(_pmc_silver_generator(iter(items)))
 
     assert len(results) == 2
     assert results[0]["pmcid"] == "12345"

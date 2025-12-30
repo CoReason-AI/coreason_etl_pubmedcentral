@@ -106,7 +106,7 @@ def transform_silver_record(item: dict[str, Any]) -> Optional[dict[str, Any]]:
                 # CRITICAL: Clear memory immediately
                 elem.clear()
                 while elem.getprevious() is not None:
-                    del elem.getparent()[0]  # type: ignore
+                    del elem.getparent()[0]
 
         if processed:
             return parsed_record
