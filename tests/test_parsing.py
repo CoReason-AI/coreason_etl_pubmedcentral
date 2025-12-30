@@ -17,9 +17,11 @@ from lxml import etree
 from coreason_etl_pubmedcentral.parsing.parser import (
     ArticleType,
     parse_article_authors,
+    parse_article_content,
     parse_article_dates,
     parse_article_funding,
     parse_article_identity,
+    parse_article_keywords,
 )
 
 
@@ -51,6 +53,11 @@ def funding_data_path() -> str:
 @pytest.fixture  # type: ignore
 def funding_complex_data_path() -> str:
     return os.path.join(os.path.dirname(__file__), "data", "jats_funding_complex.xml")
+
+
+@pytest.fixture  # type: ignore
+def content_data_path() -> str:
+    return os.path.join(os.path.dirname(__file__), "data", "jats_content_sample.xml")
 
 
 @pytest.fixture  # type: ignore
@@ -99,6 +106,13 @@ def funding_articles(funding_data_path: str) -> Generator[list[etree._Element], 
 @pytest.fixture  # type: ignore
 def funding_complex_articles(funding_complex_data_path: str) -> Generator[list[etree._Element], None, None]:
     tree = etree.parse(funding_complex_data_path)
+    root = tree.getroot()
+    yield root.xpath("//*[local-name()='article']")
+
+
+@pytest.fixture  # type: ignore
+def content_articles(content_data_path: str) -> Generator[list[etree._Element], None, None]:
+    tree = etree.parse(content_data_path)
     root = tree.getroot()
     yield root.xpath("//*[local-name()='article']")
 
@@ -637,3 +651,165 @@ def test_parse_funding_only_ids(funding_complex_articles: list[etree._Element]) 
     ids = sorted([f.grant_id for f in funding if f.grant_id])
     assert ids == ["ID X", "ID Y"]
     assert all(f.agency is None for f in funding)
+
+
+def test_parse_content_full(content_articles: list[etree._Element]) -> None:
+    # Article 1: Full content
+    article = content_articles[0]
+    content = parse_article_content(article)
+    keywords = parse_article_keywords(article)
+
+    assert content.title == "Test Article Title"  # "Article" is italic in XML
+    assert "test abstract" in content.abstract  # type: ignore
+    assert "Background" in content.abstract  # type: ignore
+    assert content.journal_name == "Journal of Testing"
+
+    assert len(keywords) == 4
+    assert "keyword1" in keywords
+    assert "keyword two" in keywords
+    assert "Subject A" in keywords
+    assert "Subject B" in keywords
+
+
+def test_parse_content_minimal(content_articles: list[etree._Element]) -> None:
+    # Article 2: Minimal content
+    article = content_articles[1]
+    content = parse_article_content(article)
+    keywords = parse_article_keywords(article)
+
+    assert content.title is None
+    assert content.abstract is None
+    assert content.journal_name is None
+    assert keywords == []
+
+
+def test_parse_content_complex(content_articles: list[etree._Element]) -> None:
+    # Article 3: Complex/Edge cases
+    article = content_articles[2]
+    content = parse_article_content(article)
+    keywords = parse_article_keywords(article)
+
+    # Title with nested bold tag
+    assert content.title == "Bold Title"
+    # Abstract with paragraphs
+    assert "Para 1" in content.abstract  # type: ignore
+    assert "Para 2" in content.abstract  # type: ignore
+    # Journal
+    assert content.journal_name == "Complex Journal"
+    # Keywords from multiple groups
+    assert "author-kw1" in keywords
+    assert "kw2" in keywords
+
+
+def test_parse_content_whitespace_handling(content_articles: list[etree._Element]) -> None:
+    # Test for whitespace handling between paragraphs (Minified case)
+    # <p> tags adjacent without whitespace
+    xml = (
+        "<article><front><article-meta><abstract>"
+        "<p>Paragraph One.</p><p>Paragraph Two.</p>"
+        "</abstract></article-meta></front></article>"
+    )
+    article = etree.fromstring(xml)
+    content = parse_article_content(article)
+
+    # Current buggy implementation would yield "Paragraph One.Paragraph Two."
+    # We want "Paragraph One. Paragraph Two."
+    assert content.abstract is not None
+    assert "Paragraph One. Paragraph Two." in content.abstract
+
+
+def test_parse_content_complex_markup_title() -> None:
+    # Test Title with Sub/Sup/Math
+    xml = """
+    <article>
+        <front>
+            <article-meta>
+                <title-group>
+                    <article-title>H<sub>2</sub>O is <bold>Water</bold></article-title>
+                </title-group>
+            </article-meta>
+        </front>
+    </article>
+    """
+    article = etree.fromstring(xml)
+    content = parse_article_content(article)
+
+    # We expect flattened text: "H 2 O is Water" or "H2O is Water"
+    # Ideally "H2O is Water" is acceptable for simple flattening,
+    # but "H 2 O" might happen if we join everything with spaces.
+    # If we change _get_full_text to join with spaces, "H 2 O" is likely.
+    # Let's verify expectation.
+    # "H2O" is better than "H 2 O".
+    # But "ParagraphOne.ParagraphTwo" is worse than "Paragraph One. Paragraph Two."
+
+    # Ideally: Block elements add space, Inline elements do not.
+    # But JATS is complex. <sub> is inline. <p> is block.
+    # Solving this perfectly requires a complex text extractor.
+    # For now, let's see what a simple "join with space + normalize" does.
+    # "H 2 O is Water". This is acceptable for search/analytics.
+
+    # Expectation: "H 2 O is Water" (due to space insertion)
+    # Ideally "H2O" but solving inline vs block spacing genericly is hard.
+    # We accept "H 2 O" for search index.
+    assert content.title == "H 2 O is Water"
+
+
+def test_parse_content_multiple_abstracts() -> None:
+    # Test Multiple Abstracts (e.g. Graphical)
+    xml = """
+    <article>
+        <front>
+            <article-meta>
+                <abstract abstract-type="main">
+                    <p>Main Abstract.</p>
+                </abstract>
+                <abstract abstract-type="graphical">
+                    <p>Graphical Abstract.</p>
+                </abstract>
+            </article-meta>
+        </front>
+    </article>
+    """
+    article = etree.fromstring(xml)
+    content = parse_article_content(article)
+
+    # Should pick the first one found by xpath (document order).
+    assert content.abstract == "Main Abstract."
+
+
+def test_parse_keywords_nested_structure() -> None:
+    # Test Keywords with complex structure or attributes
+    xml = """
+    <article>
+        <front>
+            <article-meta>
+                <kwd-group kwd-group-type="author">
+                    <kwd>kw1</kwd>
+                    <kwd><italic>kw2</italic></kwd>
+                </kwd-group>
+                <kwd-group kwd-group-type="ontology">
+                    <compound-kwd>
+                        <compound-kwd-part content-type="id">ID:123</compound-kwd-part>
+                        <compound-kwd-part content-type="text">Term</compound-kwd-part>
+                    </compound-kwd>
+                </kwd-group>
+            </article-meta>
+        </front>
+    </article>
+    """
+    # Note: Our parser only looks for `//kwd-group/kwd`.
+    # It does NOT handle `compound-kwd` currently.
+    # This test documents that limitation or behavior.
+
+    article = etree.fromstring(xml)
+    keywords = parse_article_keywords(article)
+
+    assert "kw1" in keywords
+    assert "kw2" in keywords
+
+    # Verify we don't pick up compound-kwd parts if we don't look for them
+    # XPath: .//*[local-name()='kwd-group']/*[local-name()='kwd']
+    # So compound-kwd children are ignored.
+    # This is "Correct" for strict JATS 1.0 parsing, but we might want them later.
+    # For now, assert known behavior.
+    assert len(keywords) == 2

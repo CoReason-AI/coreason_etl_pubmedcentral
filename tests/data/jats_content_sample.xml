@@ -1,0 +1,75 @@
+<?xml version="1.0" ?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.0 20120330//EN" "JATS-journalpublishing1.dtd">
+<pmc-articles>
+  <!-- Article 1: Full content -->
+  <article>
+    <front>
+      <journal-meta>
+        <journal-title-group>
+          <journal-title>Journal of Testing</journal-title>
+        </journal-title-group>
+      </journal-meta>
+      <article-meta>
+        <title-group>
+          <article-title>Test <italic>Article</italic> Title</article-title>
+        </title-group>
+        <abstract>
+          <p>This is a <b>test</b> abstract.</p>
+          <sec>
+             <title>Background</title>
+             <p>Background text.</p>
+          </sec>
+        </abstract>
+        <kwd-group>
+          <kwd>keyword1</kwd>
+          <kwd>keyword two</kwd>
+        </kwd-group>
+        <article-categories>
+           <subj-group>
+              <subject>Subject A</subject>
+              <subject>Subject B</subject>
+           </subj-group>
+        </article-categories>
+      </article-meta>
+    </front>
+  </article>
+
+  <!-- Article 2: Minimal content (missing optional fields) -->
+  <article>
+    <front>
+      <journal-meta>
+      </journal-meta>
+      <article-meta>
+      </article-meta>
+    </front>
+  </article>
+
+  <!-- Article 3: Complex/Edge cases -->
+  <article>
+    <front>
+      <journal-meta>
+        <journal-title-group>
+          <journal-title>Complex Journal</journal-title>
+        </journal-title-group>
+      </journal-meta>
+      <article-meta>
+        <title-group>
+           <!-- Nested tags, no text directly in title -->
+          <article-title><bold>Bold Title</bold></article-title>
+        </title-group>
+        <!-- Abstract with multiple paragraphs -->
+        <abstract>
+           <p>Para 1</p>
+           <p>Para 2</p>
+        </abstract>
+        <!-- Multiple kwd-groups -->
+        <kwd-group kwd-group-type="author">
+          <kwd>author-kw1</kwd>
+        </kwd-group>
+        <kwd-group kwd-group-type="kwd">
+          <kwd>kw2</kwd>
+        </kwd-group>
+      </article-meta>
+    </front>
+  </article>
+</pmc-articles>
