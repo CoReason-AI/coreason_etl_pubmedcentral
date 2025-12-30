@@ -9,8 +9,8 @@
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
 import dlt
-from dlt.pipeline.pipeline import Pipeline
 from dlt.common.pipeline import LoadInfo
+from dlt.pipeline.pipeline import Pipeline
 
 from coreason_etl_pubmedcentral.pipeline_gold import pmc_gold
 from coreason_etl_pubmedcentral.pipeline_silver import pmc_silver

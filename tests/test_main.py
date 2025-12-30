@@ -10,7 +10,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import dlt
 from dlt.common.pipeline import LoadInfo
 
 from coreason_etl_pubmedcentral.main import run_pipeline
