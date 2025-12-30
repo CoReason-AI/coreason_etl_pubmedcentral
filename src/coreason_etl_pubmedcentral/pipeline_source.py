@@ -16,8 +16,8 @@ from typing import Any, Optional
 import dlt
 
 from coreason_etl_pubmedcentral.manifest import parse_manifest
-from coreason_etl_pubmedcentral.utils.logger import logger
 from coreason_etl_pubmedcentral.source_manager import SourceManager
+from coreason_etl_pubmedcentral.utils.logger import logger
 
 
 @dlt.source  # type: ignore[misc]
@@ -96,7 +96,7 @@ def pmc_xml_files(
                         "last_updated": record.last_updated,
                     }
 
-                except Exception as e:
+                except Exception:
                     context_logger.exception(f"Failed to ingest file {record.file_path}")
                     pass
 

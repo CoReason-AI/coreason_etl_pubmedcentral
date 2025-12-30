@@ -11,7 +11,7 @@
 from coreason_etl_pubmedcentral.utils.logger import logger
 
 
-@logger.catch
+@logger.catch  # type: ignore[misc]
 def hello_world() -> str:
     logger.info("Hello World!")
     return "Hello World!"
