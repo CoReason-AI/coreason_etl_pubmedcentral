@@ -23,6 +23,7 @@ from coreason_etl_pubmedcentral.utils.logger import logger
 @dlt.source  # type: ignore[misc]
 def pmc_source(
     manifest_file_path: str,
+    remote_manifest_path: Optional[str] = None,
     source_manager: Optional[SourceManager] = None,
 ) -> Any:
     """
@@ -30,17 +31,19 @@ def pmc_source(
 
     Args:
         manifest_file_path: Path to the local CSV manifest file.
+        remote_manifest_path: Optional S3/FTP path to download manifest from (e.g. 'oa_comm/oa_comm.filelist.csv').
         source_manager: Instance of SourceManager. If None, one will be created.
 
     Returns:
         The dlt resources.
     """
-    return pmc_xml_files(manifest_file_path, source_manager)
+    return pmc_xml_files(manifest_file_path, remote_manifest_path, source_manager)
 
 
 @dlt.resource(write_disposition="append")  # type: ignore[misc]
 def pmc_xml_files(
     manifest_file_path: str,
+    remote_manifest_path: Optional[str] = None,
     source_manager: Optional[SourceManager] = None,
     last_updated: dlt.sources.incremental[Any] = dlt.sources.incremental("last_updated"),  # noqa: B008
 ) -> Iterator[dict[str, Any]]:
@@ -49,6 +52,16 @@ def pmc_xml_files(
     """
     if source_manager is None:
         source_manager = SourceManager()
+
+    if remote_manifest_path:
+        logger.info(f"Downloading manifest from {remote_manifest_path} to {manifest_file_path}")
+        try:
+            content = source_manager.get_file(remote_manifest_path)
+            with open(manifest_file_path, "wb") as f:
+                f.write(content)
+        except Exception:
+            logger.exception(f"Failed to download manifest from {remote_manifest_path}")
+            raise
 
     # Determine cutoff from incremental state
     last_ingested_cutoff: Optional[datetime] = None

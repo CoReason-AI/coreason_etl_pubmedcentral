@@ -92,15 +92,21 @@ def test_run_pipeline_custom_config(mock_dependencies: dict[str, Any]) -> None:
     manifest_path = "custom.csv"
     destination = "postgres"
     dataset = "my_pmc"
+    remote_path = "s3/remote.csv"
 
-    run_pipeline(manifest_path, destination=destination, dataset_name=dataset)
+    run_pipeline(
+        manifest_path,
+        destination=destination,
+        dataset_name=dataset,
+        remote_manifest_path=remote_path,
+    )
 
     deps["pipeline"].assert_called_once_with(
         pipeline_name="coreason_pmc_etl",
         destination=destination,
         dataset_name=dataset,
     )
-    deps["source"].assert_called_once_with(manifest_file_path=manifest_path)
+    deps["source"].assert_called_once_with(manifest_file_path=manifest_path, remote_manifest_path=remote_path)
 
 
 def test_run_pipeline_execution_error(mock_dependencies: dict[str, Any]) -> None:
