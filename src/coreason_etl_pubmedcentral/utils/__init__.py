@@ -7,11 +7,3 @@
 # Commercial use beyond a 30-day trial requires a separate license.
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
-
-from coreason_etl_pubmedcentral.utils.logger import logger
-
-
-@logger.catch
-def hello_world() -> str:
-    logger.info("Hello World!")
-    return "Hello World!"
