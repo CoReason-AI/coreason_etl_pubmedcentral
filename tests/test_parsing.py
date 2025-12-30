@@ -807,9 +807,8 @@ def test_parse_keywords_nested_structure() -> None:
     assert "kw1" in keywords
     assert "kw2" in keywords
 
-    # Verify we don't pick up compound-kwd parts if we don't look for them
-    # XPath: .//*[local-name()='kwd-group']/*[local-name()='kwd']
-    # So compound-kwd children are ignored.
-    # This is "Correct" for strict JATS 1.0 parsing, but we might want them later.
-    # For now, assert known behavior.
-    assert len(keywords) == 2
+    # compound-kwd parts: "ID:123", "Term"
+    # _get_full_text joins with space.
+    assert "ID:123 Term" in keywords
+
+    assert len(keywords) == 3
