@@ -400,3 +400,77 @@ def test_pmc_xml_files_empty_manifest(mock_source_manager: MagicMock) -> None:
             items = list(pmc_xml_files("path.csv", source_manager=mock_source_manager, last_updated=inc))
 
             assert len(items) == 0
+
+
+def test_pmc_xml_files_manifest_write_permission_error(mock_source_manager: MagicMock) -> None:
+    """
+    Verify behavior when the local file system denies write access for the downloaded manifest.
+    """
+    manifest_path = "protected.csv"
+    remote_path = "s3/remote.csv"
+    mock_source_manager.get_file.return_value = b"content"
+
+    # Mock open to raise PermissionError on write (wb)
+    m_open = mock_open()
+    m_open.side_effect = PermissionError("Access Denied")
+
+    with patch("builtins.open", m_open):
+        with pytest.raises(ResourceExtractionError) as excinfo:
+            list(
+                pmc_xml_files(
+                    manifest_path,
+                    remote_manifest_path=remote_path,
+                    source_manager=mock_source_manager,
+                )
+            )
+        assert isinstance(excinfo.value.__cause__, PermissionError)
+
+
+def test_pmc_xml_files_manifest_corrupted_content(mock_source_manager: MagicMock) -> None:
+    """
+    Verify that the pipeline handles corrupted/garbage manifest content correctly.
+    Since we don't parse it immediately during download, the error happens during the read phase.
+    """
+    manifest_path = "corrupt.csv"
+    remote_path = "s3/corrupt.csv"
+    # Invalid UTF-8 sequence
+    corrupt_content = b"\x80\x81\xff"
+
+    mock_source_manager.get_file.return_value = corrupt_content
+
+    with patch("builtins.open", mock_open()):
+        with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest") as mock_parse:
+            mock_parse.side_effect = UnicodeDecodeError("utf-8", b"", 0, 1, "invalid")
+
+            with pytest.raises(ResourceExtractionError) as excinfo:
+                list(
+                    pmc_xml_files(
+                        manifest_path,
+                        remote_manifest_path=remote_path,
+                        source_manager=mock_source_manager,
+                    )
+                )
+            assert isinstance(excinfo.value.__cause__, UnicodeDecodeError)
+
+
+def test_pmc_xml_files_remote_manifest_empty(mock_source_manager: MagicMock) -> None:
+    """
+    Verify behavior when the downloaded manifest is empty.
+    """
+    manifest_path = "empty.csv"
+    remote_path = "s3/empty.csv"
+    mock_source_manager.get_file.return_value = b""
+
+    # Mock open to behave like empty file on read
+    m_open = mock_open(read_data="")
+
+    with patch("builtins.open", m_open):
+        with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[]):
+            items = list(
+                pmc_xml_files(
+                    manifest_path,
+                    remote_manifest_path=remote_path,
+                    source_manager=mock_source_manager,
+                )
+            )
+            assert len(items) == 0
