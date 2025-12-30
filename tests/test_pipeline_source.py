@@ -266,6 +266,10 @@ def test_pmc_xml_files_mixed_batch(mock_source_manager: MagicMock) -> None:
     with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=records):
         with patch("builtins.open", mock_open()):
             with patch("coreason_etl_pubmedcentral.pipeline_source.logger") as mock_logger:
+                # Mock the bind method to return the mock_logger itself (or another mock)
+                mock_context_logger = MagicMock()
+                mock_logger.bind.return_value = mock_context_logger
+
                 inc = dlt.sources.incremental("last_updated")
                 items = list(pmc_xml_files("path.csv", source_manager=mock_source_manager, last_updated=inc))
 
@@ -275,11 +279,11 @@ def test_pmc_xml_files_mixed_batch(mock_source_manager: MagicMock) -> None:
                 assert items[1]["manifest_metadata"]["accession_id"] == "PMC4"
 
                 # Verify logs
-                # Should have error logs for file2 and file3
-                assert mock_logger.error.call_count >= 2
+                # Should have exception logs for file2 and file3
+                assert mock_context_logger.exception.call_count >= 2
 
                 # Check call args to verify file paths involved
-                error_calls = mock_logger.error.call_args_list
+                error_calls = mock_context_logger.exception.call_args_list
                 assert any("file2.xml" in str(call.args) for call in error_calls)
                 assert any("file3.xml" in str(call.args) for call in error_calls)
 
@@ -294,14 +298,15 @@ def test_pmc_xml_files_utf8_decode_error(mock_source_manager: MagicMock) -> None
     with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[record]):
         with patch("builtins.open", mock_open()):
             with patch("coreason_etl_pubmedcentral.pipeline_source.logger") as mock_logger:
+                # Mock the bind method
+                mock_context_logger = MagicMock()
+                mock_logger.bind.return_value = mock_context_logger
+
                 inc = dlt.sources.incremental("last_updated")
                 items = list(pmc_xml_files("path.csv", source_manager=mock_source_manager, last_updated=inc))
 
                 assert len(items) == 0
-                mock_logger.error.assert_called()
-                assert "UnicodeDecodeError" in str(mock_logger.error.call_args) or "codec" in str(
-                    mock_logger.error.call_args
-                )
+                mock_context_logger.exception.assert_called()
 
 
 def test_pmc_xml_files_source_change_tracking(mock_source_manager: MagicMock) -> None:

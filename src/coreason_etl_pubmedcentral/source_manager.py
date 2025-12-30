@@ -17,7 +17,8 @@ import boto3
 from botocore import UNSIGNED
 from botocore.config import Config
 from botocore.exceptions import ClientError, ConnectionError
-from loguru import logger
+
+from coreason_etl_pubmedcentral.utils.logger import logger
 
 
 class SourceType(Enum):

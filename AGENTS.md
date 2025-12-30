@@ -50,6 +50,7 @@ This project uses **Ruff** for Python linting/formatting, **Mypy** for typing, a
   * Avoid Any wherever possible.
 * **Logging:** Use loguru instead of the standard logging module.
   * *Good:* from loguru import logger -> logger.info("...")
+  * *Better:* from coreason_etl_pubmedcentral.utils.logger import logger
 * **Licensing:** Every .py file must start with the standard license header.
 
 ### **Legal & Intellectual Property**
@@ -86,6 +87,26 @@ You are strictly forbidden from copying, reproducing, imitating, or drawing from
 * **Safety:** Never hardcode credentials in tests. Use environment variables.
 
 ## **4. Architecture & Security**
+
+### **Logging & Observability**
+
+* **Standard:** Exclusively use `loguru`. The built-in `logging` module and `print()` are strictly forbidden.
+* **Centralized Configuration:** The logger is configured in `src/coreason_etl_pubmedcentral/utils/logger.py`.
+* **Output:**
+    * **Console:** Human-readable text (`sys.stderr`, level="INFO").
+    * **File:** JSON format (`logs/app.log`), rotated every 500 MB, retained for 10 days.
+* **Usage Example:**
+
+    ```python
+    from coreason_etl_pubmedcentral.utils.logger import logger
+
+    # Inside an Agent
+    logger.info("Agent started task")
+    try:
+        ...
+    except Exception:
+        logger.exception("Agent failed")
+    ```
 
 ### **Configuration Standards (Environment Variables)**
 
