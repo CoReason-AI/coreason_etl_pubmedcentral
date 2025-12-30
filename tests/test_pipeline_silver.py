@@ -77,6 +77,12 @@ def test_transform_silver_record_success(sample_bronze_record: dict[str, Any]) -
     # Check Dates
     assert record["date_published"] == "2024-01-01"
 
+    # Check Content
+    assert record["title"] == "Test Article"
+    assert record["abstract"] is None  # No abstract in sample_xml_content
+    assert record["journal_name"] is None
+    assert record["keywords"] == []
+
     # Check Authors
     assert len(record["authors"]) == 1
     assert record["authors"][0]["surname"] == "Doe"

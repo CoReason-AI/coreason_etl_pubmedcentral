@@ -17,9 +17,11 @@ from lxml import etree
 
 from coreason_etl_pubmedcentral.parsing.parser import (
     parse_article_authors,
+    parse_article_content,
     parse_article_dates,
     parse_article_funding,
     parse_article_identity,
+    parse_article_keywords,
 )
 from coreason_etl_pubmedcentral.utils.logger import logger
 
@@ -68,6 +70,12 @@ def transform_silver_record(item: dict[str, Any]) -> Optional[dict[str, Any]]:
                 # Funding
                 funding = parse_article_funding(elem)
 
+                # Content (Title, Abstract, Journal)
+                content = parse_article_content(elem)
+
+                # Keywords
+                keywords = parse_article_keywords(elem)
+
                 # Construct Silver Record
                 parsed_record = {
                     "pmcid": identity.pmcid,
@@ -77,6 +85,11 @@ def transform_silver_record(item: dict[str, Any]) -> Optional[dict[str, Any]]:
                     "date_published": dates.date_published,
                     "date_received": dates.date_received,
                     "date_accepted": dates.date_accepted,
+                    # Content Fields
+                    "title": content.title,
+                    "abstract": content.abstract,
+                    "journal_name": content.journal_name,
+                    "keywords": keywords,
                     # Serialize authors
                     "authors": [
                         {
@@ -138,6 +151,6 @@ def pmc_silver(items: Iterator[dict[str, Any]]) -> Iterator[dict[str, Any]]:  # 
     Silver Layer Transformer.
     Parses raw XML from Bronze layer into structured Silver records.
     Handles JATS schema drift, identity extraction, temporal normalization,
-    entity resolution, and funding normalization.
+    entity resolution, funding normalization, and content extraction.
     """
     return _pmc_silver_generator(items)
