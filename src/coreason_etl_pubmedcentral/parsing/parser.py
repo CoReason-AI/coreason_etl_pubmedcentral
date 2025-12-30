@@ -433,7 +433,14 @@ def parse_article_keywords(article_element: etree._Element) -> list[str]:
         if text:
             keywords.append(text)
 
-    # 2. article-categories/subj-group/subject
+    # 2. kwd-group/compound-kwd
+    compound_kwds = article_element.xpath(".//*[local-name()='kwd-group']/*[local-name()='compound-kwd']")
+    for node in compound_kwds:
+        text = _get_full_text(node)
+        if text:
+            keywords.append(text)
+
+    # 3. article-categories/subj-group/subject
     subjects = article_element.xpath(
         ".//*[local-name()='article-categories']/*[local-name()='subj-group']/*[local-name()='subject']"
     )
