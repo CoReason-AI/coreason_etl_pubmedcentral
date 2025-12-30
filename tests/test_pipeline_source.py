@@ -43,7 +43,7 @@ def test_pmc_source_entry_point(mock_source_manager: MagicMock) -> None:
         res = fn("path.csv", source_manager=mock_source_manager)
 
         assert res == "resource_obj"
-        mock_resource.assert_called_with("path.csv", mock_source_manager)
+        mock_resource.assert_called_with("path.csv", None, mock_source_manager)
 
 
 def test_pmc_xml_files_happy_path(mock_source_manager: MagicMock) -> None:
@@ -86,8 +86,60 @@ def test_pmc_xml_files_happy_path(mock_source_manager: MagicMock) -> None:
             _, kwargs = mock_parse.call_args
             assert kwargs["last_ingested_cutoff"] is None
 
-            # Verify get_file called
+            # Verify get_file called for the XML file
             mock_source_manager.get_file.assert_called_with("oa_comm/xml/PMC1.xml")
+
+
+def test_pmc_xml_files_remote_manifest_download(mock_source_manager: MagicMock) -> None:
+    """Verify that providing remote_manifest_path triggers download."""
+    manifest_path = "local_manifest.csv"
+    remote_path = "s3/path/to/manifest.csv"
+    manifest_content = b"header\nfile,PMC1,2024-01-01 12:00:00,123,CC0,no"
+
+    mock_source_manager.get_file.return_value = manifest_content
+
+    # We need to mock open so we can verify write AND read
+    # We use a mock that handles both read and write
+    m_open = mock_open(read_data=manifest_content.decode("utf-8"))
+
+    with patch("builtins.open", m_open):
+        with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[]) as mock_parse:
+            list(
+                pmc_xml_files(
+                    manifest_path,
+                    remote_manifest_path=remote_path,
+                    source_manager=mock_source_manager,
+                )
+            )
+
+    # Verify download called
+    mock_source_manager.get_file.assert_any_call(remote_path)
+
+    # Verify file written (wb mode)
+    m_open.assert_any_call(manifest_path, "wb")
+    handle = m_open()
+    handle.write.assert_called_with(manifest_content)
+
+    # Verify file read (r mode) happens after (implied by parse_manifest being called)
+    mock_parse.assert_called()
+
+
+def test_pmc_xml_files_remote_manifest_download_failure(mock_source_manager: MagicMock) -> None:
+    """Verify exception propagation if manifest download fails."""
+    manifest_path = "local_manifest.csv"
+    remote_path = "s3/fail.csv"
+
+    mock_source_manager.get_file.side_effect = Exception("Download Fail")
+
+    with patch("builtins.open", mock_open()):
+        with pytest.raises(Exception, match="Download Fail"):
+            list(
+                pmc_xml_files(
+                    manifest_path,
+                    remote_manifest_path=remote_path,
+                    source_manager=mock_source_manager,
+                )
+            )
 
 
 def test_pmc_xml_files_incremental(mock_source_manager: MagicMock) -> None:
