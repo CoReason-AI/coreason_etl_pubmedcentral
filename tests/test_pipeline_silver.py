@@ -16,6 +16,16 @@ from dlt.common import pendulum
 from lxml import etree
 
 from coreason_etl_pubmedcentral.pipeline_silver import _pmc_silver_generator, transform_silver_record
+from coreason_etl_pubmedcentral.utils.logger import logger
+
+
+@pytest.fixture
+def log_capture() -> Any:
+    """Captures loguru logs."""
+    logs = []
+    handler_id = logger.add(lambda msg: logs.append(msg), format="{message}", level="INFO")
+    yield logs
+    logger.remove(handler_id)
 
 
 @pytest.fixture  # type: ignore[misc]
@@ -96,13 +106,58 @@ def test_transform_silver_record_success(sample_bronze_record: dict[str, Any]) -
     assert record["manifest_metadata"]["accession_id"] == "PMC12345"
 
 
-def test_transform_silver_record_retraction(sample_bronze_record: dict[str, Any]) -> None:
+def test_transform_silver_record_retraction_logging(sample_bronze_record: dict[str, Any], log_capture: list[str]) -> None:
     # Set retracted = True in manifest
     sample_bronze_record["manifest_metadata"]["is_retracted"] = True
 
     record = transform_silver_record(sample_bronze_record)
+
     assert record is not None
     assert record["is_retracted"] is True
+
+    # Verify Log
+    assert any("RetractionFound - Marking 12345 as retracted based on manifest." in msg for msg in log_capture)
+
+
+def test_transform_silver_record_schema_violation_logging(sample_bronze_record: dict[str, Any], log_capture: list[str]) -> None:
+    # Remove Title
+    # XML without title-group
+    xml = """
+    <article article-type="research-article">
+        <front>
+            <article-meta>
+                <article-id pub-id-type="pmc">PMC12345</article-id>
+            </article-meta>
+        </front>
+    </article>
+    """
+    sample_bronze_record["raw_xml_payload"] = xml
+
+    record = transform_silver_record(sample_bronze_record)
+
+    assert record is not None
+    assert any("SchemaViolation - Article 12345 missing mandatory 'title' field." in msg for msg in log_capture)
+
+    # Clear logs for next assertion
+    log_capture.clear()
+
+    # Case 2: Missing PMCID
+    xml_no_id = """
+    <article article-type="research-article">
+        <front>
+            <article-meta>
+                <title-group>
+                    <article-title>Title</article-title>
+                </title-group>
+            </article-meta>
+        </front>
+    </article>
+    """
+    sample_bronze_record["raw_xml_payload"] = xml_no_id
+
+    transform_silver_record(sample_bronze_record)
+
+    assert any("SchemaViolation - Article missing mandatory 'pmcid' field." in msg for msg in log_capture)
 
 
 def test_transform_silver_record_malformed_xml(sample_bronze_record: dict[str, Any]) -> None:
