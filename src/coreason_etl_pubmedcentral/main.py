@@ -8,6 +8,8 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
+from typing import Optional
+
 import dlt
 from dlt.common.pipeline import LoadInfo
 from dlt.pipeline.pipeline import Pipeline
@@ -22,14 +24,16 @@ def run_pipeline(
     manifest_path: str,
     destination: str = "duckdb",
     dataset_name: str = "pmc_data",
+    remote_manifest_path: Optional[str] = None,
 ) -> LoadInfo:
     """
     Orchestrates the PMC ETL pipeline: Bronze -> Silver -> Gold.
 
     Args:
-        manifest_path: Path to the CSV manifest file.
+        manifest_path: Path to the local CSV manifest file.
         destination: DLT destination (default: "duckdb").
         dataset_name: Target dataset name (default: "pmc_data").
+        remote_manifest_path: Optional S3/FTP path to download manifest from.
 
     Returns:
         LoadInfo object containing execution metrics.
@@ -45,7 +49,7 @@ def run_pipeline(
 
     # 2. Bronze Layer (Source)
     # The source function returns a DltSource object containing the 'pmc_xml_files' resource
-    bronze_source = pmc_source(manifest_file_path=manifest_path)
+    bronze_source = pmc_source(manifest_file_path=manifest_path, remote_manifest_path=remote_manifest_path)
 
     # Extract the resource for wiring.
     # Note: We must refer to the resource by name as defined in pipeline_source.py
