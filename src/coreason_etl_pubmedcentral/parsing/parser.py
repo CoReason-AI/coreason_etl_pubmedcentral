@@ -62,9 +62,12 @@ def _get_text(element: etree._Element, xpath_query: str) -> Optional[str]:
 def _get_full_text(element: etree._Element) -> str:
     """
     Helper to extract all text content from an element, including children.
-    Equivalent to XPath string(.).
+    Equivalent to XPath string(.), but handles whitespace normalization.
     """
-    return "".join(element.itertext()).strip()
+    # Use " " join to ensure adjacent elements don't merge words.
+    text = " ".join(element.itertext())
+    # Normalize whitespace: collapse multiple spaces/newlines to single space
+    return " ".join(text.split())
 
 
 def _normalize_date_element(date_element: etree._Element) -> Optional[str]:
