@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<article article-type="editorial">
+  <front>
+    <article-meta>
+       <!-- Seasons Test -->
+       <pub-date pub-type="epub">
+          <year>2021</year>
+          <season>Spring</season>
+       </pub-date>
+       <history>
+        <date date-type="received">
+          <year>2021</year>
+          <season>Summer</season>
+        </date>
+        <!-- Missing Year Test (previously accepted was Winter) -->
+        <date date-type="accepted">
+           <month>12</month>
+        </date>
+       </history>
+
+       <!-- PMCID without prefix -->
+       <article-id pub-id-type="pmc">99999</article-id>
+
+       <funding-group>
+         <!-- Agency only -->
+         <award-group>
+           <funding-source>Lone Agency</funding-source>
+         </award-group>
+         <!-- ID only -->
+         <award-group>
+           <award-id>LONE-ID-123</award-id>
+         </award-group>
+       </funding-group>
+    </article-meta>
+  </front>
+</article>

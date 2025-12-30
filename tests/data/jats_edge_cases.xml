@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<article article-type="case-report">
+  <front>
+    <article-meta>
+       <!-- Minimal content for edge case tests -->
+       <pub-date pub-type="pmc-release">
+          <year>2022</year>
+          <month>invalid</month>
+       </pub-date>
+       <!-- Non-numeric day -->
+       <history>
+        <date date-type="received">
+          <year>2022</year>
+          <month>05</month>
+          <day>XX</day>
+        </date>
+       </history>
+    </article-meta>
+  </front>
+</article>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.3 20210610//EN" "JATS-archivearticle1-3.dtd">
+<article xmlns:xlink="http://www.w3.org/1999/xlink" article-type="review-article">
+  <front>
+    <article-meta>
+      <article-id pub-id-type="pmc">PMC67890</article-id>
+
+      <pub-date pub-type="epub">
+        <year>2024</year>
+        <month>02</month>
+        <day>15</day>
+      </pub-date>
+
+      <history>
+        <date date-type="received">
+          <year>2023</year>
+          <season>Fall</season>
+        </date>
+        <date date-type="accepted">
+          <year>2024</year>
+          <month>01</month>
+          <day>10</day>
+        </date>
+      </history>
+
+      <contrib-group>
+        <contrib contrib-type="author">
+          <name>
+            <surname>Smith</surname>
+            <given-names>Jane</given-names>
+          </name>
+          <xref ref-type="aff" rid="aff1 aff2"/>
+        </contrib>
+      </contrib-group>
+
+      <aff id="aff1">Modern Institute</aff>
+      <aff id="aff2">Global Research Center</aff>
+
+      <funding-group>
+        <award-group>
+          <funding-source>Modern Agency</funding-source>
+          <funding-source>Co-Sponsor Inc.</funding-source>
+          <award-id>MA-2024</award-id>
+          <award-id>CS-999</award-id>
+        </award-group>
+      </funding-group>
+    </article-meta>
+  </front>
+</article>

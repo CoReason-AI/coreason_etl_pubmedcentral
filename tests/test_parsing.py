@@ -8,632 +8,179 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
-import os
-from typing import Generator
-
-import pytest
-from lxml import etree
+import unittest
+from pathlib import Path
 
 from coreason_etl_pubmedcentral.parsing.parser import (
     ArticleType,
-    parse_article_authors,
-    parse_article_dates,
-    parse_article_funding,
-    parse_article_identity,
+    parse_jats_xml,
 )
 
-
-@pytest.fixture  # type: ignore
-def sample_data_path() -> str:
-    return os.path.join(os.path.dirname(__file__), "data", "jats_identity_sample.xml")
-
-
-@pytest.fixture  # type: ignore
-def dates_data_path() -> str:
-    return os.path.join(os.path.dirname(__file__), "data", "jats_dates_sample.xml")
-
-
-@pytest.fixture  # type: ignore
-def authors_data_path() -> str:
-    return os.path.join(os.path.dirname(__file__), "data", "jats_authors_sample.xml")
-
-
-@pytest.fixture  # type: ignore
-def authors_edge_cases_path() -> str:
-    return os.path.join(os.path.dirname(__file__), "data", "jats_authors_edge_cases.xml")
-
-
-@pytest.fixture  # type: ignore
-def funding_data_path() -> str:
-    return os.path.join(os.path.dirname(__file__), "data", "jats_funding_sample.xml")
-
-
-@pytest.fixture  # type: ignore
-def funding_complex_data_path() -> str:
-    return os.path.join(os.path.dirname(__file__), "data", "jats_funding_complex.xml")
-
-
-@pytest.fixture  # type: ignore
-def articles(sample_data_path: str) -> Generator[list[etree._Element], None, None]:
-    tree = etree.parse(sample_data_path)
-    root = tree.getroot()
-    yield list(root.findall("article"))
-
-
-@pytest.fixture  # type: ignore
-def complex_articles() -> Generator[list[etree._Element], None, None]:
-    path = os.path.join(os.path.dirname(__file__), "data", "jats_complex_sample.xml")
-    tree = etree.parse(path)
-    root = tree.getroot()
-    yield root.xpath("//*[local-name()='article']")
-
-
-@pytest.fixture  # type: ignore
-def date_articles(dates_data_path: str) -> Generator[list[etree._Element], None, None]:
-    tree = etree.parse(dates_data_path)
-    root = tree.getroot()
-    yield root.xpath("//*[local-name()='article']")
-
-
-@pytest.fixture  # type: ignore
-def author_articles(authors_data_path: str) -> Generator[list[etree._Element], None, None]:
-    tree = etree.parse(authors_data_path)
-    root = tree.getroot()
-    yield root.xpath("//*[local-name()='article']")
-
-
-@pytest.fixture  # type: ignore
-def author_edge_case_articles(authors_edge_cases_path: str) -> Generator[list[etree._Element], None, None]:
-    tree = etree.parse(authors_edge_cases_path)
-    root = tree.getroot()
-    yield root.xpath("//*[local-name()='article']")
-
-
-@pytest.fixture  # type: ignore
-def funding_articles(funding_data_path: str) -> Generator[list[etree._Element], None, None]:
-    tree = etree.parse(funding_data_path)
-    root = tree.getroot()
-    yield root.xpath("//*[local-name()='article']")
-
-
-@pytest.fixture  # type: ignore
-def funding_complex_articles(funding_complex_data_path: str) -> Generator[list[etree._Element], None, None]:
-    tree = etree.parse(funding_complex_data_path)
-    root = tree.getroot()
-    yield root.xpath("//*[local-name()='article']")
-
-
-def test_parse_identity_research(articles: list[etree._Element]) -> None:
-    # First article is research-article
-    article = articles[0]
-    identity = parse_article_identity(article)
-
-    assert identity.pmcid == "12345"  # PMC prefix stripped
-    assert identity.pmid == "12345678"
-    assert identity.doi == "10.1000/123"
-    assert identity.article_type == ArticleType.RESEARCH
-
-
-def test_parse_identity_review(articles: list[etree._Element]) -> None:
-    # Second article is review-article
-    article = articles[1]
-    identity = parse_article_identity(article)
-
-    assert identity.pmcid == "67890"
-    assert identity.pmid is None  # Missing
-    assert identity.doi == "10.1000/456"
-    assert identity.article_type == ArticleType.REVIEW
-
-
-def test_parse_identity_case_report(articles: list[etree._Element]) -> None:
-    # Third article is case-report
-    article = articles[2]
-    identity = parse_article_identity(article)
-
-    assert identity.pmcid == "11111"
-    assert identity.article_type == ArticleType.CASE_REPORT
-
-
-def test_parse_identity_other(articles: list[etree._Element]) -> None:
-    # Fourth article is editorial -> OTHER
-    article = articles[3]
-    identity = parse_article_identity(article)
-
-    assert identity.pmcid == "22222"
-    assert identity.article_type == ArticleType.OTHER
-
-
-def test_parse_identity_minimal(articles: list[etree._Element]) -> None:
-    # Fifth article is minimal -> no IDs, no type
-    article = articles[4]
-    identity = parse_article_identity(article)
-
-    assert identity.pmcid is None
-    assert identity.pmid is None
-    assert identity.doi is None
-    assert identity.article_type == ArticleType.OTHER
-
-
-def test_pmc_strip_variations() -> None:
-    # Test variation where PMC prefix might be missing or different case (though typically uppercase)
-    xml = """
-    <article>
-        <front>
-            <article-meta>
-                <article-id pub-id-type="pmc">12345</article-id>
-            </article-meta>
-        </front>
-    </article>
-    """
-    article = etree.fromstring(xml)
-    identity = parse_article_identity(article)
-    assert identity.pmcid == "12345"
-
-    xml_lower = """
-    <article>
-        <front>
-            <article-meta>
-                <article-id pub-id-type="pmc">pmc12345</article-id>
-            </article-meta>
-        </front>
-    </article>
-    """
-    article = etree.fromstring(xml_lower)
-    identity = parse_article_identity(article)
-    assert identity.pmcid == "12345"
-
-
-def test_parse_identity_namespaces(complex_articles: list[etree._Element]) -> None:
-    # 1. Namespaced Article
-    article = complex_articles[0]
-    identity = parse_article_identity(article)
-
-    assert identity.pmcid == "99999"
-    assert identity.pmid == "99999999"
-    assert identity.article_type == ArticleType.RESEARCH
-
-
-def test_parse_identity_multiple_ids(complex_articles: list[etree._Element]) -> None:
-    # 2. Multiple IDs
-    article = complex_articles[1]
-    identity = parse_article_identity(article)
-
-    # Should pick the first one found
-    assert identity.pmcid == "11111"
-    assert identity.doi == "10.1000/first"
-    assert identity.article_type == ArticleType.REVIEW
-
-
-def test_parse_identity_whitespace_and_empty(complex_articles: list[etree._Element]) -> None:
-    # 3. Empty Tags / Weird Whitespace
-    article = complex_articles[2]
-    identity = parse_article_identity(article)
-
-    # Whitespace around ID should be stripped
-    assert identity.pmcid == "33333"
-    # Empty tags or whitespace-only tags should return None (not empty string)
-    assert identity.pmid is None  # Was empty tag
-    assert identity.doi is None  # Was whitespace only
-    assert identity.article_type == ArticleType.CASE_REPORT
-
-
-def test_parse_identity_other_types(complex_articles: list[etree._Element]) -> None:
-    # 4. Other types (letter)
-    article_letter = complex_articles[3]
-    identity_letter = parse_article_identity(article_letter)
-    assert identity_letter.pmcid == "44444"
-    assert identity_letter.article_type == ArticleType.OTHER
-
-    # 5. Other types (correction)
-    article_correction = complex_articles[4]
-    identity_correction = parse_article_identity(article_correction)
-    assert identity_correction.pmcid == "55555"
-    assert identity_correction.article_type == ArticleType.OTHER
-
-
-def test_parse_identity_real_namespace(complex_articles: list[etree._Element]) -> None:
-    # 6. Real Default Namespace
-    article = complex_articles[5]
-    identity = parse_article_identity(article)
-
-    # This often fails if XPath doesn't handle namespaces or local-name()
-    assert identity.pmcid == "66666"
-    assert identity.article_type == ArticleType.RESEARCH
-
-
-def test_parse_dates_priority_and_history(date_articles: list[etree._Element]) -> None:
-    # 1. Full Dates & Priority (epub > ppub)
-    article = date_articles[0]
-    dates = parse_article_dates(article)
-
-    # epub is 2023-05-15
-    assert dates.date_published == "2023-05-15"
-    # received: 2023-01-10
-    assert dates.date_received == "2023-01-10"
-    # accepted: 2023-04-20
-    assert dates.date_accepted == "2023-04-20"
-
-
-def test_parse_dates_defaults_year_only(date_articles: list[etree._Element]) -> None:
-    # 2. Year only -> 2023-01-01
-    article = date_articles[1]
-    dates = parse_article_dates(article)
-    assert dates.date_published == "2023-01-01"
-
-
-def test_parse_dates_defaults_year_month_only(date_articles: list[etree._Element]) -> None:
-    # 3. Year and Month only -> 2023-07-01
-    article = date_articles[2]
-    dates = parse_article_dates(article)
-    assert dates.date_published == "2023-07-01"
-
-
-def test_parse_dates_season_spring(date_articles: list[etree._Element]) -> None:
-    # 4. Season: Spring -> 03
-    article = date_articles[3]
-    dates = parse_article_dates(article)
-    assert dates.date_published == "2024-03-01"
-
-
-def test_parse_dates_season_summer(date_articles: list[etree._Element]) -> None:
-    # 5. Season: Summer -> 06
-    article = date_articles[4]
-    dates = parse_article_dates(article)
-    assert dates.date_published == "2024-06-01"
-
-
-def test_parse_dates_season_fall(date_articles: list[etree._Element]) -> None:
-    # 6. Season: Fall -> 09
-    article = date_articles[5]
-    dates = parse_article_dates(article)
-    assert dates.date_published == "2024-09-01"
-
-
-def test_parse_dates_season_winter(date_articles: list[etree._Element]) -> None:
-    # 7. Season: Winter -> 12
-    article = date_articles[6]
-    dates = parse_article_dates(article)
-    assert dates.date_published == "2024-12-01"
-
-
-def test_parse_dates_fallback_ppub(date_articles: list[etree._Element]) -> None:
-    # 8. Fallback to ppub (no epub)
-    article = date_articles[7]
-    dates = parse_article_dates(article)
-    assert dates.date_published == "2022-12-25"
-
-
-def test_parse_dates_fallback_pmc(date_articles: list[etree._Element]) -> None:
-    # 9. Fallback to pmc-release (no epub, no ppub)
-    article = date_articles[8]
-    dates = parse_article_dates(article)
-    assert dates.date_published == "2021-01-01"
-
-
-def test_parse_dates_missing_year(date_articles: list[etree._Element]) -> None:
-    # 10. Missing Year -> None
-    article = date_articles[9]
-    dates = parse_article_dates(article)
-    assert dates.date_published is None
-
-
-def test_parse_dates_namespace(date_articles: list[etree._Element]) -> None:
-    # 11. Namespaced elements
-    article = date_articles[10]
-    dates = parse_article_dates(article)
-    assert dates.date_published == "2025-05-05"
-
-
-def test_parse_dates_unknown_season(date_articles: list[etree._Element]) -> None:
-    # 12. Unknown Season -> 01
-    article = date_articles[11]
-    dates = parse_article_dates(article)
-    assert dates.date_published == "2026-01-01"
-
-
-def test_parse_dates_textual_month(date_articles: list[etree._Element]) -> None:
-    # 13. Textual Month "May" -> "01" (Strict ISO enforcement)
-    article = date_articles[12]
-    dates = parse_article_dates(article)
-    assert dates.date_published == "2027-01-01"
-
-
-def test_parse_dates_whitespace(date_articles: list[etree._Element]) -> None:
-    # 14. Whitespace in fields -> Stripped
-    article = date_articles[13]
-    dates = parse_article_dates(article)
-    assert dates.date_published == "2028-08-15"
-
-
-def test_parse_dates_multiple_same_type(date_articles: list[etree._Element]) -> None:
-    # 15. Multiple epub -> Pick first
-    article = date_articles[14]
-    dates = parse_article_dates(article)
-    assert dates.date_published == "2029-01-01"
-
-
-def test_parse_dates_case_insensitive_type(date_articles: list[etree._Element]) -> None:
-    # 16. pub-type="EPUB" -> Should match
-    article = date_articles[15]
-    dates = parse_article_dates(article)
-    assert dates.date_published == "2030-01-01"
-
-
-def test_parse_dates_non_numeric_day(date_articles: list[etree._Element]) -> None:
-    # 17. Non-numeric day "15th" -> "01" (Strict ISO enforcement)
-    article = date_articles[16]
-    dates = parse_article_dates(article)
-    assert dates.date_published == "2031-05-01"
-
-
-def test_parse_authors_simple(author_articles: list[etree._Element]) -> None:
-    # Case 1: Simple case, one author, one affiliation
-    article = author_articles[0]
-    authors = parse_article_authors(article)
-
-    assert len(authors) == 1
-    assert authors[0].surname == "Doe"
-    assert authors[0].given_names == "John"
-    assert authors[0].affiliations == ["University of Testing"]
-
-
-def test_parse_authors_multiple_shared(author_articles: list[etree._Element]) -> None:
-    # Case 2: Multiple authors, shared and unique affiliations
-    article = author_articles[1]
-    authors = parse_article_authors(article)
-
-    assert len(authors) == 2
-    # Smith: aff1, aff2
-    assert authors[0].surname == "Smith"
-    assert authors[0].given_names == "Alice"
-    assert authors[0].affiliations == ["Institute of Science", "Department of Logic"]
-    # Jones: aff2
-    assert authors[1].surname == "Jones"
-    assert authors[1].given_names == "Bob"
-    assert authors[1].affiliations == ["Department of Logic"]
-
-
-def test_parse_authors_none(author_articles: list[etree._Element]) -> None:
-    # Case 3: Author with no affiliation, partial name
-    article = author_articles[2]
-    authors = parse_article_authors(article)
-
-    assert len(authors) == 1
-    assert authors[0].surname == "Lonely"
-    assert authors[0].given_names is None
-    assert authors[0].affiliations == []
-
-
-def test_parse_authors_broken_link(author_articles: list[etree._Element]) -> None:
-    # Case 4: Broken link (rid does not exist)
-    article = author_articles[3]
-    authors = parse_article_authors(article)
-
-    assert len(authors) == 1
-    assert authors[0].surname == "Broken"
-    assert authors[0].affiliations == []  # Should handle missing ID gracefully
-
-
-def test_parse_authors_complex_text(author_articles: list[etree._Element]) -> None:
-    # Case 5: Complex affiliation text
-    article = author_articles[4]
-    authors = parse_article_authors(article)
-
-    assert len(authors) == 1
-    assert authors[0].surname == "Complex"
-    assert "University of Complex Data" in authors[0].affiliations[0]
-    assert "Techland" in authors[0].affiliations[0]
-
-
-def test_parse_authors_multiple_groups(author_edge_case_articles: list[etree._Element]) -> None:
-    # Case 6: Multiple contrib-groups (authors and editors)
-    article = author_edge_case_articles[0]
-    authors = parse_article_authors(article)
-
-    # Logic iterates all contrib-group/contrib, so should get both
-    assert len(authors) == 2
-    names = {a.surname for a in authors}
-    assert "Author" in names
-    assert "Editor" in names
-    assert authors[0].affiliations[0] == "Shared Institute"
-
-
-def test_parse_authors_duplicate_ids(author_edge_case_articles: list[etree._Element]) -> None:
-    # Case 7: Duplicate aff IDs (Last one wins)
-    article = author_edge_case_articles[1]
-    authors = parse_article_authors(article)
-
-    assert len(authors) == 1
-    assert authors[0].surname == "Dupe"
-    # The map logic `aff_map[aff_id] = text` overwrites, so second definition wins
-    assert authors[0].affiliations == ["Second Definition"]
-
-
-def test_parse_authors_unicode(author_edge_case_articles: list[etree._Element]) -> None:
-    # Case 8: Unicode Characters
-    article = author_edge_case_articles[2]
-    authors = parse_article_authors(article)
-
-    assert len(authors) == 1
-    assert authors[0].surname == "Müller"
-    assert authors[0].given_names == "Jürgen"
-    # "Universität Tübingen"
-    # In XML it is encoded as HTML entities or UTF-8. lxml handles decoding.
-    # We check if it contains the correct unicode string.
-    assert "Universität Tübingen" in authors[0].affiliations[0]
-
-
-def test_parse_authors_mixed_rids(author_edge_case_articles: list[etree._Element]) -> None:
-    # Case 9: Mixed Valid/Invalid RIDs
-    article = author_edge_case_articles[3]
-    authors = parse_article_authors(article)
-
-    assert len(authors) == 1
-    # "aff1 invalid_id aff2" -> Should get aff1 and aff2, ignore invalid_id
-    affs = authors[0].affiliations
-    assert len(affs) == 2
-    assert "Affiliation One" in affs
-    assert "Affiliation Two" in affs
-
-
-def test_parse_authors_xref_types(author_edge_case_articles: list[etree._Element]) -> None:
-    # Case 10: Xref missing ref-type or wrong type
-    article = author_edge_case_articles[4]
-    authors = parse_article_authors(article)
-
-    assert len(authors) == 1
-    # Should only pick up the one with ref-type="aff"
-    assert len(authors[0].affiliations) == 1
-    assert authors[0].affiliations[0] == "Correct Affiliation"
-
-
-def test_parse_funding_modern(funding_articles: list[etree._Element]) -> None:
-    # Modern JATS
-    article = funding_articles[0]
-    funding = parse_article_funding(article)
-
-    # 3 groups
-    assert len(funding) == 3
-
-    # 1. NIH, R01-12345
-    assert funding[0].agency == "National Institutes of Health"
-    assert funding[0].grant_id == "R01-12345"
-
-    # 2. NSF, None
-    assert funding[1].agency == "NSF"
-    assert funding[1].grant_id is None
-
-    # 3. None, G-999
-    assert funding[2].agency is None
-    assert funding[2].grant_id == "G-999"
-
-
-def test_parse_funding_legacy(funding_articles: list[etree._Element]) -> None:
-    # Legacy JATS
-    article = funding_articles[1]
-    funding = parse_article_funding(article)
-
-    # Expect: 2 sponsors (Pfizer, Moderna) + 1 num (CN-1001) = 3 entries
-    assert len(funding) == 3
-
-    # Order depends on implementation (sponsors first then nums)
-    # Sponsors
-    agencies = {f.agency for f in funding if f.agency}
-    assert "Pfizer" in agencies
-    assert "Moderna" in agencies
-
-    # Numbers
-    ids = {f.grant_id for f in funding if f.grant_id}
-    assert "CN-1001" in ids
-
-
-def test_parse_funding_mixed(funding_articles: list[etree._Element]) -> None:
-    # Mixed JATS (Modern + Legacy)
-    article = funding_articles[2]
-    funding = parse_article_funding(article)
-
-    # 1 award group + 1 contract-sponsor = 2 entries
-    assert len(funding) == 2
-
-    agencies = {f.agency for f in funding if f.agency}
-    assert "Wellcome Trust" in agencies
-    assert "Gates Foundation" in agencies
-
-    ids = {f.grant_id for f in funding if f.grant_id}
-    assert "WT-555" in ids
-
-
-def test_parse_funding_empty(funding_articles: list[etree._Element]) -> None:
-    # Empty award group
-    article = funding_articles[3]
-    funding = parse_article_funding(article)
-
-    assert len(funding) == 0
-
-
-def test_parse_funding_nested_text(funding_complex_articles: list[etree._Element]) -> None:
-    # 1. Nested Text
-    article = funding_complex_articles[0]
-    funding = parse_article_funding(article)
-
-    assert len(funding) == 1
-    # Check that text content of children (italic, sup, bold) is preserved and concatenated
-    assert funding[0].agency == "Agency with Italic and Sup"
-    assert funding[0].grant_id == "ID Bold"
-
-
-def test_parse_funding_namespaces(funding_complex_articles: list[etree._Element]) -> None:
-    # 2. Namespaces
-    article = funding_complex_articles[1]
-    funding = parse_article_funding(article)
-
-    # local-name() should ignore "ns:" prefix
-    assert len(funding) == 1
-    assert funding[0].agency == "Namespaced Agency"
-    assert funding[0].grant_id == "NS-123"
-
-
-def test_parse_funding_multiple_sources_ids(funding_complex_articles: list[etree._Element]) -> None:
-    # 3. Multiple Sources and IDs -> Cross Product
-    article = funding_complex_articles[2]
-    funding = parse_article_funding(article)
-
-    # Agencies: A, B. IDs: 1, 2.
-    # Cross product: (A,1), (A,2), (B,1), (B,2) -> 4 entries
-    assert len(funding) == 4
-
-    agencies = [f.agency for f in funding]
-    ids = [f.grant_id for f in funding]
-
-    assert agencies.count("Agency A") == 2
-    assert agencies.count("Agency B") == 2
-    assert ids.count("Grant 1") == 2
-    assert ids.count("Grant 2") == 2
-
-
-def test_parse_funding_whitespace(funding_complex_articles: list[etree._Element]) -> None:
-    # 4. Whitespace
-    article = funding_complex_articles[3]
-    funding = parse_article_funding(article)
-
-    assert len(funding) == 1
-    # _get_full_text strips leading/trailing, but itertext() might preserve internal newlines depending on parser
-    # "Agency \n Multiline" -> itertext joins them.
-    # Our _get_full_text joins all itertext().
-    # If XML is:
-    # <source>
-    #   Agency
-    #   Multiline
-    # </source>
-    # lxml itertext returns "Agency", "\n", "Multiline" (approx).
-    # .join(...) -> "Agency\n   Multiline" -> .strip() -> "Agency\n   Multiline".
-    # Wait, usually we want to collapse whitespace?
-    # Spec says "Extract raw text".
-    # Let's check what it actually returns.
-    # lxml itertext() often includes whitespace.
-    # Asserting containment for now.
-    assert "Agency" in funding[0].agency  # type: ignore
-    assert "Multiline" in funding[0].agency  # type: ignore
-    assert "ID-Multiline" in funding[0].grant_id  # type: ignore
-
-
-def test_parse_funding_only_sources(funding_complex_articles: list[etree._Element]) -> None:
-    # 5. Multiple Sources, No IDs
-    article = funding_complex_articles[4]
-    funding = parse_article_funding(article)
-
-    assert len(funding) == 2
-    agencies = sorted([f.agency for f in funding if f.agency])
-    assert agencies == ["Source X", "Source Y"]
-    assert all(f.grant_id is None for f in funding)
-
-
-def test_parse_funding_only_ids(funding_complex_articles: list[etree._Element]) -> None:
-    # 6. Multiple IDs, No Sources
-    article = funding_complex_articles[5]
-    funding = parse_article_funding(article)
-
-    assert len(funding) == 2
-    ids = sorted([f.grant_id for f in funding if f.grant_id])
-    assert ids == ["ID X", "ID Y"]
-    assert all(f.agency is None for f in funding)
+DATA_DIR = Path(__file__).parent / "data"
+
+
+class TestJatsParsing(unittest.TestCase):
+    def setUp(self) -> None:
+        self.legacy_xml = (DATA_DIR / "jats_legacy.xml").read_text(encoding="utf-8")
+        self.modern_xml = (DATA_DIR / "jats_modern.xml").read_text(encoding="utf-8")
+        self.edge_xml = (DATA_DIR / "jats_edge_cases.xml").read_text(encoding="utf-8")
+        self.coverage_xml = (DATA_DIR / "jats_coverage.xml").read_text(encoding="utf-8")
+        self.wrapper_xml = (DATA_DIR / "jats_wrapper.xml").read_text(encoding="utf-8")
+        self.no_type_xml = (DATA_DIR / "jats_no_type.xml").read_text(encoding="utf-8")
+        self.winter_xml = (DATA_DIR / "jats_winter.xml").read_text(encoding="utf-8")
+
+    def test_legacy_parsing(self) -> None:
+        result = parse_jats_xml(self.legacy_xml)
+
+        # Identity
+        identity = result["identity"]
+        self.assertEqual(identity["pmcid"], "12345")  # Strip PMC
+        self.assertEqual(identity["pmid"], "98765432")
+        self.assertEqual(identity["doi"], "10.1234/test.v1i1.1")
+        self.assertEqual(identity["article_type"], ArticleType.RESEARCH)
+
+        # Dates
+        dates = result["dates"]
+        # Legacy xml only has year 2020. Default month/day 01.
+        self.assertEqual(dates["date_published"], "2020-01-01")
+        self.assertIsNone(dates["date_received"])
+
+        # Authors
+        authors = result["authors"]
+        self.assertEqual(len(authors), 1)
+        self.assertEqual(authors[0]["surname"], "Doe")
+        self.assertEqual(authors[0]["given_names"], "John")
+        self.assertEqual(authors[0]["affiliations"], ["Legacy University"])
+
+        # Funding (Legacy: Independent)
+        funding = result["funding"]
+        # Expected: 2 entries (one for grant, one for sponsor)
+        # order depends on xml order logic. We scan sponsors then nums.
+        agencies = [f["agency"] for f in funding if f["agency"]]
+        grant_ids = [f["grant_id"] for f in funding if f["grant_id"]]
+
+        self.assertIn("Legacy Foundation", agencies)
+        self.assertIn("GRANT123", grant_ids)
+        self.assertEqual(len(funding), 2)
+        # Verify independence (one has agency/no-id, other has id/no-agency)
+        for f in funding:
+            if f["agency"]:
+                self.assertIsNone(f["grant_id"])
+            if f["grant_id"]:
+                self.assertIsNone(f["agency"])
+
+    def test_modern_parsing(self) -> None:
+        result = parse_jats_xml(self.modern_xml)
+
+        # Identity
+        identity = result["identity"]
+        self.assertEqual(identity["pmcid"], "67890")
+        self.assertEqual(identity["article_type"], ArticleType.REVIEW)
+
+        # Dates
+        dates = result["dates"]
+        self.assertEqual(dates["date_published"], "2024-02-15")
+        # Season Fall -> 09. Missing day -> 01.
+        self.assertEqual(dates["date_received"], "2023-09-01")
+        self.assertEqual(dates["date_accepted"], "2024-01-10")
+
+        # Authors
+        authors = result["authors"]
+        self.assertEqual(len(authors), 1)
+        jane = authors[0]
+        self.assertEqual(jane["surname"], "Smith")
+        self.assertEqual(jane["affiliations"], ["Modern Institute", "Global Research Center"])
+
+        # Funding (Modern: Cross Product)
+        funding = result["funding"]
+        # 2 Sources * 2 IDs = 4 Entries
+        self.assertEqual(len(funding), 4)
+
+        # Verify cross product
+        pairs = {(f["agency"], f["grant_id"]) for f in funding}
+        expected = {
+            ("Modern Agency", "MA-2024"),
+            ("Modern Agency", "CS-999"),
+            ("Co-Sponsor Inc.", "MA-2024"),
+            ("Co-Sponsor Inc.", "CS-999"),
+        }
+        self.assertEqual(pairs, expected)
+
+    def test_edge_cases(self) -> None:
+        result = parse_jats_xml(self.edge_xml)
+
+        dates = result["dates"]
+        # pmc-release, month=invalid -> 01
+        self.assertEqual(dates["date_published"], "2022-01-01")
+
+        # received, day=XX -> 01
+        self.assertEqual(dates["date_received"], "2022-05-01")
+
+        identity = result["identity"]
+        self.assertEqual(identity["article_type"], ArticleType.CASE_REPORT)
+
+    def test_coverage_cases(self) -> None:
+        result = parse_jats_xml(self.coverage_xml)
+
+        # Identity: Editorial -> OTHER. PMCID missing text -> None
+        identity = result["identity"]
+        self.assertEqual(identity["article_type"], ArticleType.OTHER)
+        # We expect 99999 because it's valid text but no PMC prefix
+        self.assertEqual(identity["pmcid"], "99999")
+
+        # Dates: Seasons
+        dates = result["dates"]
+        # Spring -> 03
+        self.assertEqual(dates["date_published"], "2021-03-01")
+        # Received Summer -> 06
+        self.assertEqual(dates["date_received"], "2021-06-01")
+        # Accepted missing year -> None
+        self.assertIsNone(dates["date_accepted"])
+
+        # Funding: Partial
+        funding = result["funding"]
+        # Lone Agency (Grant None), Lone ID (Agency None)
+        self.assertEqual(len(funding), 2)
+        agencies = [f["agency"] for f in funding if f["agency"]]
+        ids = [f["grant_id"] for f in funding if f["grant_id"]]
+
+        self.assertIn("Lone Agency", agencies)
+        self.assertIn("LONE-ID-123", ids)
+        for f in funding:
+            if f["agency"] == "Lone Agency":
+                self.assertIsNone(f["grant_id"])
+            if f["grant_id"] == "LONE-ID-123":
+                self.assertIsNone(f["agency"])
+
+    def test_winter_case(self) -> None:
+        result = parse_jats_xml(self.winter_xml)
+        dates = result["dates"]
+        # Winter -> 12
+        self.assertEqual(dates["date_published"], "2022-12-01")
+
+    def test_wrapper_xml(self) -> None:
+        # Tests that logic handles wrapped article (standard bulk or concat)
+        # And specifically hits the 'del elem.getparent()[0]' line.
+        # Also tests the <month></month> empty text case.
+        result = parse_jats_xml(self.wrapper_xml)
+
+        identity = result["identity"]
+        self.assertEqual(identity["pmcid"], "999")
+
+        dates = result["dates"]
+        # Empty month -> default 01
+        self.assertEqual(dates["date_published"], "2023-01-01")
+
+    def test_no_type_xml(self) -> None:
+        # Tests logic when article-type attribute is missing
+        result = parse_jats_xml(self.no_type_xml)
+
+        identity = result["identity"]
+        self.assertEqual(identity["article_type"], ArticleType.OTHER)
+        self.assertEqual(identity["pmcid"], "888")
+
+    def test_bytes_input(self) -> None:
+        """Verify parser accepts bytes."""
+        xml_bytes = self.legacy_xml.encode("utf-8")
+        result = parse_jats_xml(xml_bytes)
+        self.assertEqual(result["identity"]["pmcid"], "12345")

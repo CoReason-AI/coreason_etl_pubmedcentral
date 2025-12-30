@@ -1,0 +1,15 @@
+<root>
+  <ignore-me/>
+  <article article-type="research-article">
+    <front>
+      <article-meta>
+        <article-id pub-id-type="pmc">PMC999</article-id>
+        <pub-date pub-type="epub">
+           <year>2023</year>
+           <!-- Empty month to test _get_text text=None path -->
+           <month></month>
+        </pub-date>
+      </article-meta>
+    </front>
+  </article>
+</root>

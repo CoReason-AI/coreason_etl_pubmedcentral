@@ -8,8 +8,9 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
+import io
 from enum import Enum
-from typing import NamedTuple, Optional
+from typing import Any, NamedTuple, Optional
 
 from lxml import etree
 
@@ -357,3 +358,59 @@ def parse_article_funding(article_element: etree._Element) -> list[ArticleFundin
             funding_list.append(ArticleFunding(agency=None, grant_id=text))
 
     return funding_list
+
+
+def parse_jats_xml(xml_content: str | bytes) -> dict[str, Any]:
+    """
+    Parses a single JATS XML content and returns a dictionary with extracted fields.
+    Implements memory-efficient 'Stream & Clear' parsing.
+
+    Args:
+        xml_content: The raw XML content as string or bytes.
+
+    Returns:
+        Dictionary containing:
+        - identity: dict (pmcid, pmid, doi, article_type)
+        - dates: dict (published, received, accepted)
+        - authors: list of dicts
+        - funding: list of dicts
+    """
+    if isinstance(xml_content, str):
+        # BytesIO is required for iterparse usually, but StringIO might work if string is passed?
+        # etree.iterparse expects a file path or file-like object.
+        # If input is string, use BytesIO with encoding.
+        f = io.BytesIO(xml_content.encode("utf-8"))
+    else:
+        f = io.BytesIO(xml_content)
+
+    result = {}
+
+    # Use iterparse to handle memory
+    context = etree.iterparse(f, events=("end",), tag="article")
+
+    # We expect only one <article> root per file, but loop anyway.
+    for _, elem in context:
+        # Process the full article element
+        # Note: Since we use tag='article' and event='end', 'elem' is the full tree of the article.
+        # This means the whole article is in memory.
+        # JATS articles are typically < 10MB, so this fits "Stream & Clear" for processing *many* files.
+        # The key is to clear it after processing.
+
+        identity = parse_article_identity(elem)
+        dates = parse_article_dates(elem)
+        authors = parse_article_authors(elem)
+        funding = parse_article_funding(elem)
+
+        result = {
+            "identity": identity._asdict(),
+            "dates": dates._asdict(),
+            "authors": [a._asdict() for a in authors],
+            "funding": [f._asdict() for f in funding],
+        }
+
+        # Clear memory
+        elem.clear()
+        while elem.getprevious() is not None:
+            del elem.getparent()[0]
+
+    return result
