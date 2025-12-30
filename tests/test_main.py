@@ -8,6 +8,7 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
+from typing import Any, Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -16,14 +17,15 @@ from dlt.common.pipeline import LoadInfo
 from coreason_etl_pubmedcentral.main import run_pipeline
 
 
-@pytest.fixture
-def mock_dependencies():
+@pytest.fixture  # type: ignore[misc]
+def mock_dependencies() -> Generator[dict[str, Any], None, None]:
     """Fixture to mock all external dependencies of run_pipeline."""
-    with patch("coreason_etl_pubmedcentral.main.dlt.pipeline") as mock_pipeline, \
-         patch("coreason_etl_pubmedcentral.main.pmc_source") as mock_source, \
-         patch("coreason_etl_pubmedcentral.main.pmc_silver") as mock_silver, \
-         patch("coreason_etl_pubmedcentral.main.pmc_gold") as mock_gold:
-
+    with (
+        patch("coreason_etl_pubmedcentral.main.dlt.pipeline") as mock_pipeline,
+        patch("coreason_etl_pubmedcentral.main.pmc_source") as mock_source,
+        patch("coreason_etl_pubmedcentral.main.pmc_silver") as mock_silver,
+        patch("coreason_etl_pubmedcentral.main.pmc_gold") as mock_gold,
+    ):
         # Setup common mock structure
         mock_pipeline_instance = MagicMock()
         mock_pipeline.return_value = mock_pipeline_instance
@@ -54,11 +56,11 @@ def mock_dependencies():
             "silver_resource": mock_silver_resource,
             "gold_resource": mock_gold_resource,
             "load_info": mock_load_info,
-            "bronze_source_instance": mock_bronze_source
+            "bronze_source_instance": mock_bronze_source,
         }
 
 
-def test_run_pipeline_success(mock_dependencies):
+def test_run_pipeline_success(mock_dependencies: dict[str, Any]) -> None:
     deps = mock_dependencies
     manifest_path = "test_manifest.csv"
 
@@ -85,7 +87,7 @@ def test_run_pipeline_success(mock_dependencies):
     assert args[0] == [deps["bronze_source_instance"], deps["silver_resource"], deps["gold_resource"]]
 
 
-def test_run_pipeline_custom_config(mock_dependencies):
+def test_run_pipeline_custom_config(mock_dependencies: dict[str, Any]) -> None:
     deps = mock_dependencies
     manifest_path = "custom.csv"
     destination = "postgres"
@@ -101,7 +103,7 @@ def test_run_pipeline_custom_config(mock_dependencies):
     deps["source"].assert_called_once_with(manifest_file_path=manifest_path)
 
 
-def test_run_pipeline_execution_error(mock_dependencies):
+def test_run_pipeline_execution_error(mock_dependencies: dict[str, Any]) -> None:
     deps = mock_dependencies
     # Simulate run failure
     error = RuntimeError("Pipeline crashed")
@@ -111,7 +113,7 @@ def test_run_pipeline_execution_error(mock_dependencies):
         run_pipeline("path.csv")
 
 
-def test_run_pipeline_missing_resource_key(mock_dependencies):
+def test_run_pipeline_missing_resource_key(mock_dependencies: dict[str, Any]) -> None:
     deps = mock_dependencies
     # Simulate source returning resources dict WITHOUT the expected key
     deps["bronze_source_instance"].resources = {"wrong_key": MagicMock()}
@@ -120,7 +122,7 @@ def test_run_pipeline_missing_resource_key(mock_dependencies):
         run_pipeline("path.csv")
 
 
-def test_run_pipeline_wiring_error(mock_dependencies):
+def test_run_pipeline_wiring_error(mock_dependencies: dict[str, Any]) -> None:
     deps = mock_dependencies
     # Simulate failure during piping (e.g. incompatible types)
     deps["bronze_resource"].__or__.side_effect = TypeError("Cannot pipe")
