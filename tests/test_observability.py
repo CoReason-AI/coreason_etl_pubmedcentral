@@ -8,22 +8,27 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
-from unittest.mock import MagicMock, mock_open, patch
 from datetime import datetime, timezone
+from typing import Any
+from unittest.mock import MagicMock, mock_open, patch
+
 import dlt
 import pytest
-from coreason_etl_pubmedcentral.pipeline_source import pmc_xml_files
+
 from coreason_etl_pubmedcentral.manifest import ManifestRecord
+from coreason_etl_pubmedcentral.pipeline_source import pmc_xml_files
 from coreason_etl_pubmedcentral.source_manager import SourceManager, SourceType
 from coreason_etl_pubmedcentral.utils.logger import logger as app_logger
 
-@pytest.fixture
-def mock_source_manager():
+
+@pytest.fixture  # type: ignore[misc]
+def mock_source_manager() -> MagicMock:
     sm = MagicMock(spec=SourceManager)
     sm._current_source = SourceType.S3
     return sm
 
-def test_pipeline_source_emits_success_metrics(mock_source_manager):
+
+def test_pipeline_source_emits_success_metrics(mock_source_manager: MagicMock) -> None:
     # Setup
     manifest_path = "dummy_manifest.csv"
     record = ManifestRecord(
@@ -37,12 +42,12 @@ def test_pipeline_source_emits_success_metrics(mock_source_manager):
     mock_source_manager.get_file.return_value = b"<article>Content</article>"
 
     # Capture logs
-    captured_logs = []
+    captured_logs: list[Any] = []
 
     # We can't easily patch the 'logger' variable inside the module since it's imported.
     # But since we use loguru, we can add a sink!
 
-    def sink(message):
+    def sink(message: Any) -> None:
         record = message.record
         captured_logs.append(record)
 
@@ -56,8 +61,8 @@ def test_pipeline_source_emits_success_metrics(mock_source_manager):
 
         # Verify success log
         found = False
-        for record in captured_logs:
-            extra = record["extra"]
+        for log_record in captured_logs:
+            extra = log_record["extra"]
             if extra.get("metric") == "records_ingested_total":
                 labels = extra.get("labels", {})
                 if labels.get("status") == "success" and labels.get("source") == "s3":
@@ -68,7 +73,8 @@ def test_pipeline_source_emits_success_metrics(mock_source_manager):
     finally:
         app_logger.remove(handler_id)
 
-def test_pipeline_source_emits_failure_metrics(mock_source_manager):
+
+def test_pipeline_source_emits_failure_metrics(mock_source_manager: MagicMock) -> None:
     # Setup
     manifest_path = "dummy_manifest.csv"
     record = ManifestRecord(
@@ -81,8 +87,9 @@ def test_pipeline_source_emits_failure_metrics(mock_source_manager):
     )
     mock_source_manager.get_file.side_effect = Exception("Download failed")
 
-    captured_logs = []
-    def sink(message):
+    captured_logs: list[Any] = []
+
+    def sink(message: Any) -> None:
         captured_logs.append(message.record)
 
     handler_id = app_logger.add(sink)
@@ -95,8 +102,8 @@ def test_pipeline_source_emits_failure_metrics(mock_source_manager):
 
         # Verify failure log
         found = False
-        for record in captured_logs:
-            extra = record["extra"]
+        for log_record in captured_logs:
+            extra = log_record["extra"]
             if extra.get("metric") == "records_ingested_total":
                 labels = extra.get("labels", {})
                 if labels.get("status") == "fail" and labels.get("source") == "s3":
