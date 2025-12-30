@@ -10,80 +10,120 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 from dlt.common.pipeline import LoadInfo
 
 from coreason_etl_pubmedcentral.main import run_pipeline
 
 
-@patch("coreason_etl_pubmedcentral.main.dlt.pipeline")
-@patch("coreason_etl_pubmedcentral.main.pmc_source")
-@patch("coreason_etl_pubmedcentral.main.pmc_silver")
-@patch("coreason_etl_pubmedcentral.main.pmc_gold")
-def test_run_pipeline(
-    mock_gold: MagicMock,
-    mock_silver: MagicMock,
-    mock_source: MagicMock,
-    mock_pipeline: MagicMock,
-) -> None:
-    # Setup Mocks
-    mock_pipeline_instance = MagicMock()
-    mock_pipeline.return_value = mock_pipeline_instance
-    mock_load_info = MagicMock(spec=LoadInfo)
-    mock_pipeline_instance.run.return_value = mock_load_info
+@pytest.fixture
+def mock_dependencies():
+    """Fixture to mock all external dependencies of run_pipeline."""
+    with patch("coreason_etl_pubmedcentral.main.dlt.pipeline") as mock_pipeline, \
+         patch("coreason_etl_pubmedcentral.main.pmc_source") as mock_source, \
+         patch("coreason_etl_pubmedcentral.main.pmc_silver") as mock_silver, \
+         patch("coreason_etl_pubmedcentral.main.pmc_gold") as mock_gold:
 
-    # Setup Source/Resources
-    mock_bronze_source = MagicMock()
-    # Mock resources dict access
-    mock_bronze_resource = MagicMock()
-    mock_bronze_source.resources = {"pmc_xml_files": mock_bronze_resource}
-    mock_source.return_value = mock_bronze_source
+        # Setup common mock structure
+        mock_pipeline_instance = MagicMock()
+        mock_pipeline.return_value = mock_pipeline_instance
+        mock_load_info = MagicMock(spec=LoadInfo)
+        mock_pipeline_instance.run.return_value = mock_load_info
 
-    # Wiring mocks
-    # silver = bronze | pmc_silver
-    mock_silver_resource = MagicMock()
-    # When bronze_resource | pmc_silver is called.
-    # Actually syntax is `resource | transformer`.
-    # So `mock_bronze_resource.__or__` is called with `pmc_silver` (which is the transformer func).
-    # But `pmc_silver` here is the *mocked function*.
-    # Wait, `pmc_silver` in code is the `@dlt.transformer` decorated object.
-    # When imported, it acts as a callable but also can be used in pipe.
-    # The pipe operator `|` on a dlt resource expects a callable or another resource.
+        # Setup Resources
+        mock_bronze_source = MagicMock()
+        mock_bronze_resource = MagicMock()
+        # Default behavior: source has the expected resource
+        mock_bronze_source.resources = {"pmc_xml_files": mock_bronze_resource}
+        mock_source.return_value = mock_bronze_source
 
-    # Let's mock the `__or__` method of the resources to simulate piping.
-    mock_bronze_resource.__or__.return_value = mock_silver_resource
+        # Wiring
+        mock_silver_resource = MagicMock()
+        mock_bronze_resource.__or__.return_value = mock_silver_resource
 
-    mock_gold_resource = MagicMock()
-    mock_silver_resource.__or__.return_value = mock_gold_resource
+        mock_gold_resource = MagicMock()
+        mock_silver_resource.__or__.return_value = mock_gold_resource
+
+        yield {
+            "pipeline": mock_pipeline,
+            "pipeline_instance": mock_pipeline_instance,
+            "source": mock_source,
+            "silver": mock_silver,
+            "gold": mock_gold,
+            "bronze_resource": mock_bronze_resource,
+            "silver_resource": mock_silver_resource,
+            "gold_resource": mock_gold_resource,
+            "load_info": mock_load_info,
+            "bronze_source_instance": mock_bronze_source
+        }
+
+
+def test_run_pipeline_success(mock_dependencies):
+    deps = mock_dependencies
+    manifest_path = "test_manifest.csv"
 
     # Execute
-    manifest_path = "test_manifest.csv"
-    info = run_pipeline(manifest_path, destination="duckdb", dataset_name="test_ds")
+    info = run_pipeline(manifest_path)
 
-    # Verify
-    assert info == mock_load_info
+    # Verify return
+    assert info == deps["load_info"]
 
-    # Verify Pipeline Init
-    mock_pipeline.assert_called_once_with(
+    # Verify defaults
+    deps["pipeline"].assert_called_once_with(
         pipeline_name="coreason_pmc_etl",
         destination="duckdb",
-        dataset_name="test_ds",
+        dataset_name="pmc_data",
     )
 
-    # Verify Source Init
-    mock_source.assert_called_once_with(manifest_file_path=manifest_path)
-
     # Verify Wiring
-    # 1. bronze | silver
-    mock_bronze_resource.__or__.assert_called_once_with(mock_silver)
-    # 2. silver | gold
-    mock_silver_resource.__or__.assert_called_once_with(mock_gold)
+    deps["bronze_resource"].__or__.assert_called_once_with(deps["silver"])
+    deps["silver_resource"].__or__.assert_called_once_with(deps["gold"])
 
     # Verify Run
-    # pipeline.run([bronze_source, silver_resource, gold_resource])
-    mock_pipeline_instance.run.assert_called_once()
-    args, _ = mock_pipeline_instance.run.call_args
-    resources_list = args[0]
-    assert len(resources_list) == 3
-    assert resources_list[0] == mock_bronze_source
-    assert resources_list[1] == mock_silver_resource
-    assert resources_list[2] == mock_gold_resource
+    deps["pipeline_instance"].run.assert_called_once()
+    args, _ = deps["pipeline_instance"].run.call_args
+    assert args[0] == [deps["bronze_source_instance"], deps["silver_resource"], deps["gold_resource"]]
+
+
+def test_run_pipeline_custom_config(mock_dependencies):
+    deps = mock_dependencies
+    manifest_path = "custom.csv"
+    destination = "postgres"
+    dataset = "my_pmc"
+
+    run_pipeline(manifest_path, destination=destination, dataset_name=dataset)
+
+    deps["pipeline"].assert_called_once_with(
+        pipeline_name="coreason_pmc_etl",
+        destination=destination,
+        dataset_name=dataset,
+    )
+    deps["source"].assert_called_once_with(manifest_file_path=manifest_path)
+
+
+def test_run_pipeline_execution_error(mock_dependencies):
+    deps = mock_dependencies
+    # Simulate run failure
+    error = RuntimeError("Pipeline crashed")
+    deps["pipeline_instance"].run.side_effect = error
+
+    with pytest.raises(RuntimeError, match="Pipeline crashed"):
+        run_pipeline("path.csv")
+
+
+def test_run_pipeline_missing_resource_key(mock_dependencies):
+    deps = mock_dependencies
+    # Simulate source returning resources dict WITHOUT the expected key
+    deps["bronze_source_instance"].resources = {"wrong_key": MagicMock()}
+
+    with pytest.raises(KeyError, match="'pmc_xml_files'"):
+        run_pipeline("path.csv")
+
+
+def test_run_pipeline_wiring_error(mock_dependencies):
+    deps = mock_dependencies
+    # Simulate failure during piping (e.g. incompatible types)
+    deps["bronze_resource"].__or__.side_effect = TypeError("Cannot pipe")
+
+    with pytest.raises(TypeError, match="Cannot pipe"):
+        run_pipeline("path.csv")
