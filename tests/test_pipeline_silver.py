@@ -208,3 +208,127 @@ def test_memory_clearing_pattern(sample_bronze_record: dict[str, Any]) -> None:
     assert record is not None
     assert record["pmcid"] == "999"
     # The coverage tool will confirm if the line was hit.
+
+
+def test_silver_minimal_article(sample_bronze_record: dict[str, Any]) -> None:
+    # Case 1: Minimal valid article (only required fields)
+    xml = """
+    <article article-type="other">
+        <front>
+            <article-meta>
+            </article-meta>
+        </front>
+    </article>
+    """
+    sample_bronze_record["raw_xml_payload"] = xml
+    record = transform_silver_record(sample_bronze_record)
+
+    assert record is not None
+    assert record["pmcid"] is None
+    assert record["pmid"] is None
+    assert record["doi"] is None
+    assert record["article_type"] == "OTHER"
+    assert record["date_published"] is None
+    assert record["authors"] == []
+    assert record["funding"] == []
+
+
+def test_silver_complex_entities(sample_bronze_record: dict[str, Any]) -> None:
+    # Case 2: Article with many authors and affiliations
+    # Case 3: Mixed Funding (implicit in same XML)
+    xml = """
+    <article article-type="research-article">
+        <front>
+            <article-meta>
+                <article-id pub-id-type="pmc">PMC888</article-id>
+                <contrib-group>
+                    <contrib>
+                        <name><surname>A</surname><given-names>One</given-names></name>
+                        <xref ref-type="aff" rid="aff1"/>
+                        <xref ref-type="aff" rid="aff2"/>
+                    </contrib>
+                    <contrib>
+                        <name><surname>B</surname><given-names>Two</given-names></name>
+                        <xref ref-type="aff" rid="aff2"/>
+                    </contrib>
+                </contrib-group>
+                <aff id="aff1">Univ A</aff>
+                <aff id="aff2">Univ B</aff>
+                <funding-group>
+                    <award-group>
+                        <funding-source>Agency X</funding-source>
+                        <award-id>Grant 1</award-id>
+                    </award-group>
+                </funding-group>
+                <contract-sponsor>Legacy Agency</contract-sponsor>
+            </article-meta>
+        </front>
+    </article>
+    """
+    sample_bronze_record["raw_xml_payload"] = xml
+    record = transform_silver_record(sample_bronze_record)
+
+    assert record is not None
+
+    # Authors
+    assert len(record["authors"]) == 2
+    assert record["authors"][0]["surname"] == "A"
+    assert sorted(record["authors"][0]["affiliations"]) == ["Univ A", "Univ B"]
+    assert record["authors"][1]["surname"] == "B"
+    assert record["authors"][1]["affiliations"] == ["Univ B"]
+
+    # Funding
+    # Agency X + Grant 1 (Modern) AND Legacy Agency (Legacy)
+    agencies = {f["agency"] for f in record["funding"] if f["agency"]}
+    assert "Agency X" in agencies
+    assert "Legacy Agency" in agencies
+
+    ids = {f["grant_id"] for f in record["funding"] if f["grant_id"]}
+    assert "Grant 1" in ids
+
+
+def test_silver_date_logic(sample_bronze_record: dict[str, Any]) -> None:
+    # Case 4: Seasonality
+    xml = """
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="ppub">
+                    <year>2023</year>
+                    <season>Spring</season>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+    """
+    sample_bronze_record["raw_xml_payload"] = xml
+    record = transform_silver_record(sample_bronze_record)
+
+    assert record is not None
+    assert record["date_published"] == "2023-03-01"
+
+
+def test_silver_legacy_funding(sample_bronze_record: dict[str, Any]) -> None:
+    # Case 5: Legacy Funding only
+    xml = """
+    <article>
+        <front>
+            <article-meta>
+                <contract-num>CN-123</contract-num>
+                <contract-sponsor>Sponsor Z</contract-sponsor>
+            </article-meta>
+        </front>
+    </article>
+    """
+    sample_bronze_record["raw_xml_payload"] = xml
+    record = transform_silver_record(sample_bronze_record)
+
+    assert record is not None
+    funding = record["funding"]
+    assert len(funding) == 2
+
+    agencies = {f["agency"] for f in funding}
+    ids = {f["grant_id"] for f in funding}
+
+    assert "Sponsor Z" in agencies
+    assert "CN-123" in ids
