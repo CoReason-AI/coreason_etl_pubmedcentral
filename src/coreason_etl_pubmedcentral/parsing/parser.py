@@ -55,7 +55,8 @@ def _get_text(element: etree._Element, xpath_query: str) -> Optional[str]:
     """Helper to safely get text from an element using xpath."""
     nodes = element.xpath(xpath_query)
     if nodes and nodes[0].text:
-        return nodes[0].text.strip()  # type: ignore
+        text = nodes[0].text.strip()
+        return text if text else None
     return None
 
 
