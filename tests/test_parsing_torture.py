@@ -92,9 +92,12 @@ def test_parsing_torture_funding_cross_product() -> None:
     # Verify strict combinations
     combinations = set((f.agency, f.grant_id) for f in funding)
     expected = {
-        ("Agency A", "Grant 1"), ("Agency A", "Grant 2"),
-        ("Agency B", "Grant 1"), ("Agency B", "Grant 2"),
-        ("Agency C", "Grant 1"), ("Agency C", "Grant 2"),
+        ("Agency A", "Grant 1"),
+        ("Agency A", "Grant 2"),
+        ("Agency B", "Grant 1"),
+        ("Agency B", "Grant 2"),
+        ("Agency C", "Grant 1"),
+        ("Agency C", "Grant 2"),
     }
     assert combinations == expected
 

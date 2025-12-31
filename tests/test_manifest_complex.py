@@ -8,8 +8,6 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
-import pytest
-
 from coreason_etl_pubmedcentral.manifest import parse_manifest
 
 
