@@ -109,8 +109,25 @@ def pmc_xml_files(
                         "last_updated": record.last_updated,
                     }
 
+                    # Metric: Success
+                    context_logger.bind(
+                        metric="records_ingested_total",
+                        labels={
+                            "source": source_manager._current_source.name.lower(),
+                            "status": "success",
+                        },
+                    ).info("Metric: records_ingested_total")
+
                 except Exception:
                     context_logger.exception(f"Failed to ingest file {record.file_path}")
+                    # Metric: Failure
+                    context_logger.bind(
+                        metric="records_ingested_total",
+                        labels={
+                            "source": source_manager._current_source.name.lower(),
+                            "status": "fail",
+                        },
+                    ).info("Metric: records_ingested_total")
                     pass
 
     except FileNotFoundError:
