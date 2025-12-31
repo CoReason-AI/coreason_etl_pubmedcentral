@@ -41,15 +41,10 @@ def test_pipeline_source_emits_success_metrics(mock_source_manager: MagicMock) -
     )
     mock_source_manager.get_file.return_value = b"<article>Content</article>"
 
-    # Capture logs
     captured_logs: list[Any] = []
 
-    # We can't easily patch the 'logger' variable inside the module since it's imported.
-    # But since we use loguru, we can add a sink!
-
     def sink(message: Any) -> None:
-        record = message.record
-        captured_logs.append(record)
+        captured_logs.append(message.record)
 
     handler_id = app_logger.add(sink)
 
@@ -110,6 +105,143 @@ def test_pipeline_source_emits_failure_metrics(mock_source_manager: MagicMock) -
                     found = True
                     break
         assert found, "Did not find failure metric log"
+
+    finally:
+        app_logger.remove(handler_id)
+
+
+def test_pipeline_source_metrics_failover_scenario(mock_source_manager: MagicMock) -> None:
+    """
+    Test Complex Scenario: 1 Failure (S3) -> Failover -> 1 Success (FTP).
+    Verifies that the metric source label updates correctly.
+    """
+    manifest_path = "dummy_manifest.csv"
+    records = [
+        ManifestRecord(
+            file_path="fail.xml",
+            accession_id="PMC1",
+            last_updated=datetime.now(timezone.utc),
+            pmid=None,
+            license_type="CC0",
+            is_retracted=False,
+        ),
+        ManifestRecord(
+            file_path="success.xml",
+            accession_id="PMC2",
+            last_updated=datetime.now(timezone.utc),
+            pmid=None,
+            license_type="CC0",
+            is_retracted=False,
+        ),
+    ]
+
+    # Side effect to simulate failover state change in SourceManager
+    # The real SourceManager logic handles this, but here we mock it.
+    # We simulate that the first call fails (still S3), and the second succeeds (now FTP).
+    # We must manually update the _current_source property in the side_effect or between calls.
+
+    def get_file_side_effect(path: str) -> bytes:
+        if path == "fail.xml":
+            # Simulate failure on S3
+            mock_source_manager._current_source = SourceType.S3
+            raise Exception("S3 Error")
+        elif path == "success.xml":
+            # Simulate that prior failures triggered failover
+            mock_source_manager._current_source = SourceType.FTP
+            return b"<article>Content</article>"
+        return b""
+
+    mock_source_manager.get_file.side_effect = get_file_side_effect
+
+    captured_logs: list[Any] = []
+    handler_id = app_logger.add(lambda m: captured_logs.append(m.record))
+
+    try:
+        with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=records):
+            with patch("builtins.open", mock_open(read_data="header\nline")):
+                inc = dlt.sources.incremental("last_updated")
+                list(pmc_xml_files(manifest_path, source_manager=mock_source_manager, last_updated=inc))
+
+        # Analyze logs
+        metrics = [log["extra"] for log in captured_logs if log["extra"].get("metric") == "records_ingested_total"]
+
+        assert len(metrics) == 2
+
+        # 1st Metric: Fail, S3
+        assert metrics[0]["labels"]["status"] == "fail"
+        assert metrics[0]["labels"]["source"] == "s3"
+
+        # 2nd Metric: Success, FTP
+        assert metrics[1]["labels"]["status"] == "success"
+        assert metrics[1]["labels"]["source"] == "ftp"
+
+    finally:
+        app_logger.remove(handler_id)
+
+
+def test_pipeline_source_metrics_retraction_edge_case(mock_source_manager: MagicMock) -> None:
+    """
+    Edge Case: Retracted article.
+    Should still result in a SUCCESS metric because we ingest it (logic is in Silver layer to flag it).
+    """
+    manifest_path = "dummy_manifest.csv"
+    record = ManifestRecord(
+        file_path="retracted.xml",
+        accession_id="PMC1",
+        last_updated=datetime.now(timezone.utc),
+        pmid="123",
+        license_type="CC-BY",
+        is_retracted=True,  # <--- Retracted
+    )
+    mock_source_manager.get_file.return_value = b"<article>Content</article>"
+
+    captured_logs: list[Any] = []
+    handler_id = app_logger.add(lambda m: captured_logs.append(m.record))
+
+    try:
+        with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[record]):
+            with patch("builtins.open", mock_open(read_data="header\nline")):
+                inc = dlt.sources.incremental("last_updated")
+                list(pmc_xml_files(manifest_path, source_manager=mock_source_manager, last_updated=inc))
+
+        # Verify success log
+        metrics = [log["extra"] for log in captured_logs if log["extra"].get("metric") == "records_ingested_total"]
+        assert len(metrics) == 1
+        assert metrics[0]["labels"]["status"] == "success"
+
+    finally:
+        app_logger.remove(handler_id)
+
+
+def test_pipeline_source_metrics_zero_byte_file(mock_source_manager: MagicMock) -> None:
+    """
+    Edge Case: Zero-byte file.
+    Should result in a SUCCESS metric at Bronze layer (ingestion successful, even if empty).
+    """
+    manifest_path = "dummy_manifest.csv"
+    record = ManifestRecord(
+        file_path="empty.xml",
+        accession_id="PMC1",
+        last_updated=datetime.now(timezone.utc),
+        pmid="123",
+        license_type="CC-BY",
+        is_retracted=False,
+    )
+    mock_source_manager.get_file.return_value = b""  # <--- Zero bytes
+
+    captured_logs: list[Any] = []
+    handler_id = app_logger.add(lambda m: captured_logs.append(m.record))
+
+    try:
+        with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[record]):
+            with patch("builtins.open", mock_open(read_data="header\nline")):
+                inc = dlt.sources.incremental("last_updated")
+                list(pmc_xml_files(manifest_path, source_manager=mock_source_manager, last_updated=inc))
+
+        # Verify success log
+        metrics = [log["extra"] for log in captured_logs if log["extra"].get("metric") == "records_ingested_total"]
+        assert len(metrics) == 1
+        assert metrics[0]["labels"]["status"] == "success"
 
     finally:
         app_logger.remove(handler_id)
