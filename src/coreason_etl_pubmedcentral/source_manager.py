@@ -16,7 +16,12 @@ from typing import Optional
 import boto3
 from botocore import UNSIGNED
 from botocore.config import Config
-from botocore.exceptions import ClientError, ConnectionError
+from botocore.exceptions import (
+    ConnectionError,
+    ConnectTimeoutError,
+    EndpointConnectionError,
+    ReadTimeoutError,
+)
 
 from coreason_etl_pubmedcentral.utils.logger import logger
 
@@ -59,12 +64,17 @@ class SourceManager:
                 # Success: reset error counter
                 self._s3_consecutive_errors = 0
                 return content
-            except (ClientError, ConnectionError, Exception) as e:
-                # We catch generic Exception too because boto3 can raise various errors
-                # (e.g. EndpointConnectionError)
+            except (
+                ConnectionError,
+                EndpointConnectionError,
+                ConnectTimeoutError,
+                ReadTimeoutError,
+            ) as e:
+                # Only connection/timeout errors trigger failover
                 self._s3_consecutive_errors += 1
                 logger.warning(
-                    f"S3 Error ({self._s3_consecutive_errors}/{self.FAILOVER_THRESHOLD}) fetching {file_path}: {e}"
+                    f"S3 Connection/Timeout Error ({self._s3_consecutive_errors}/{self.FAILOVER_THRESHOLD}) "
+                    f"fetching {file_path}: {e}"
                 )
 
                 if self._s3_consecutive_errors >= self.FAILOVER_THRESHOLD:
@@ -75,14 +85,7 @@ class SourceManager:
                     self._current_source = SourceType.FTP
                     # Fallthrough to FTP immediately for this request
                 else:
-                    # If we haven't switched yet, we re-raise the error for this file
-                    # OR we could try to return None? The interface says bytes.
-                    # The spec says "Automatic failover initiated after 3...".
-                    # Implicitly, the current file failing might be lost if we don't handle it.
-                    # But if we haven't failed over, we assume S3 is still primary.
-                    # Retrying this specific file on S3 is handled by caller (dlt) usually.
-                    # However, to facilitate the specific "failover" behavior,
-                    # we should probably try FTP if we JUST switched.
+                    # Re-raise so dlt knows this file failed (retries handled by dlt or next run)
                     raise e
 
         # If we are here, we are either in FTP mode OR we just switched to FTP mode.

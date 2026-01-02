@@ -13,7 +13,7 @@ from typing import Any, Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, ConnectionError
 
 from coreason_etl_pubmedcentral.source_manager import SourceManager, SourceType
 
@@ -42,43 +42,41 @@ def test_s3_success(source_manager: SourceManager) -> None:
     source_manager._s3_client.get_object.assert_called_with(Bucket="pmc-oa-opendata", Key="path/to/file.xml")
 
 
-def test_s3_transient_failure(source_manager: SourceManager) -> None:
-    # Setup
-    # First call raises error, second succeeds
+def test_s3_client_error_no_failover_count(source_manager: SourceManager) -> None:
+    # Setup: ClientError (e.g., 404) should NOT increment failover counter
     error = ClientError({"Error": {"Code": "404", "Message": "Not Found"}}, "GetObject")
-    mock_body = io.BytesIO(b"file content")
+    source_manager._s3_client.get_object.side_effect = error
 
+    with pytest.raises(ClientError):
+        source_manager.get_file("path/fail.xml")
+
+    # Verify counter did NOT increment
+    assert source_manager._s3_consecutive_errors == 0
+    assert source_manager._current_source == SourceType.S3
+
+
+def test_s3_connection_error_failover_count(source_manager: SourceManager) -> None:
+    # Setup: ConnectionError SHOULD increment failover counter
+    error = ConnectionError(error=Exception("Connection Refused"))
+    mock_body = io.BytesIO(b"file content")
     source_manager._s3_client.get_object.side_effect = [error, {"Body": mock_body}]
 
-    # Execute 1: Should raise exception
-    with pytest.raises(ClientError):
+    # Execute 1: Should raise exception and increment counter
+    with pytest.raises(ConnectionError):
         source_manager.get_file("path/fail.xml")
 
     assert source_manager._s3_consecutive_errors == 1
     assert source_manager._current_source == SourceType.S3
 
-    # Execute 2: Should succeed
+    # Execute 2: Success -> Reset counter
     data = source_manager.get_file("path/success.xml")
-
     assert data == b"file content"
     assert source_manager._s3_consecutive_errors == 0
 
 
-def test_s3_error_propagation(source_manager: SourceManager) -> None:
-    # Verify errors below threshold are raised and don't switch source
-    error = ClientError({"Error": {"Code": "500", "Message": "Error"}}, "GetObject")
-    source_manager._s3_client.get_object.side_effect = error
-
-    for i in range(2):
-        with pytest.raises(ClientError):
-            source_manager.get_file(f"file_{i}")
-        assert source_manager._s3_consecutive_errors == i + 1
-        assert source_manager._current_source == SourceType.S3
-
-
 def test_s3_failover(source_manager: SourceManager) -> None:
-    # Setup: 3 consecutive errors
-    error = ClientError({"Error": {"Code": "500", "Message": "Error"}}, "GetObject")
+    # Setup: 3 consecutive Connection errors
+    error = ConnectionError(error=Exception("Connection Refused"))
     source_manager._s3_client.get_object.side_effect = [error, error, error]
 
     # Mock FTP to verify it gets called immediately on the 3rd failure
@@ -92,17 +90,16 @@ def test_s3_failover(source_manager: SourceManager) -> None:
         mock_ftp.retrbinary.side_effect = side_effect_retrbinary
 
         # 1st Failure
-        with pytest.raises(ClientError):
+        with pytest.raises(ConnectionError):
             source_manager.get_file("f1")
         assert source_manager._s3_consecutive_errors == 1
 
         # 2nd Failure
-        with pytest.raises(ClientError):
+        with pytest.raises(ConnectionError):
             source_manager.get_file("f2")
         assert source_manager._s3_consecutive_errors == 2
 
         # 3rd Failure -> Trigger Failover -> Fetch from FTP immediately
-        # The code catches the 3rd error, logs info, switches source, and calls _fetch_ftp
         data = source_manager.get_file("f3")
 
         assert data == b"ftp content"
@@ -343,7 +340,7 @@ def test_unknown_source_state(source_manager: SourceManager) -> None:
 
 def test_s3_intermittent_failures_reset_counter(source_manager: SourceManager) -> None:
     """Verify that intermittent failures do not trigger failover if success occurs in between."""
-    error = ClientError({"Error": {"Code": "500", "Message": "Error"}}, "GetObject")
+    error = ConnectionError(error=Exception("Connection Refused"))
     mock_body = io.BytesIO(b"content")
 
     # Pattern: Fail, Fail, Success, Fail, Fail, Success
@@ -357,12 +354,12 @@ def test_s3_intermittent_failures_reset_counter(source_manager: SourceManager) -
     ]
 
     # 1. Fail
-    with pytest.raises(ClientError):
+    with pytest.raises(ConnectionError):
         source_manager.get_file("f1")
     assert source_manager._s3_consecutive_errors == 1
 
     # 2. Fail
-    with pytest.raises(ClientError):
+    with pytest.raises(ConnectionError):
         source_manager.get_file("f2")
     assert source_manager._s3_consecutive_errors == 2
 
@@ -371,7 +368,7 @@ def test_s3_intermittent_failures_reset_counter(source_manager: SourceManager) -
     assert source_manager._s3_consecutive_errors == 0
 
     # 4. Fail
-    with pytest.raises(ClientError):
+    with pytest.raises(ConnectionError):
         source_manager.get_file("f4")
     assert source_manager._s3_consecutive_errors == 1
     assert source_manager._current_source == SourceType.S3
@@ -379,16 +376,16 @@ def test_s3_intermittent_failures_reset_counter(source_manager: SourceManager) -
 
 def test_failover_persistence_explicit(source_manager: SourceManager) -> None:
     """Verify that after failover, subsequent calls strictly use FTP."""
-    error = ClientError({"Error": {"Code": "500", "Message": "Error"}}, "GetObject")
+    error = ConnectionError(error=Exception("Connection Refused"))
     source_manager._s3_client.get_object.side_effect = [error, error, error]
 
     with patch("ftplib.FTP") as mock_ftp_cls:
         mock_ftp = mock_ftp_cls.return_value
 
         # Trigger failover
-        with pytest.raises(ClientError):
+        with pytest.raises(ConnectionError):
             source_manager.get_file("f1")
-        with pytest.raises(ClientError):
+        with pytest.raises(ConnectionError):
             source_manager.get_file("f2")
 
         # 3rd failure triggers switch and immediate FTP fetch
