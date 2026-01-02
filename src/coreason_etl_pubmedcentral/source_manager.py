@@ -17,6 +17,7 @@ import boto3
 from botocore import UNSIGNED
 from botocore.config import Config
 from botocore.exceptions import (
+    ClientError,
     ConnectionError,
     ConnectTimeoutError,
     EndpointConnectionError,
@@ -87,6 +88,16 @@ class SourceManager:
                 else:
                     # Re-raise so dlt knows this file failed (retries handled by dlt or next run)
                     raise e
+            except ClientError as e:
+                # ClientError (e.g. 404, 403) implies connectivity was successful.
+                # Therefore, we reset the connection error counter.
+                if self._s3_consecutive_errors > 0:
+                    logger.info(
+                        f"S3 ClientError encountered (connectivity restored). "
+                        f"Resetting error counter from {self._s3_consecutive_errors} to 0."
+                    )
+                    self._s3_consecutive_errors = 0
+                raise e
 
         # If we are here, we are either in FTP mode OR we just switched to FTP mode.
         if self._current_source == SourceType.FTP:

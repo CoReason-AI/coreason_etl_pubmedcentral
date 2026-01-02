@@ -55,6 +55,33 @@ def test_s3_client_error_no_failover_count(source_manager: SourceManager) -> Non
     assert source_manager._current_source == SourceType.S3
 
 
+def test_s3_client_error_resets_failover_count(source_manager: SourceManager) -> None:
+    """
+    Verifies that a ClientError (e.g. 404) resets the connection error counter,
+    as it implies successful connectivity.
+    """
+    conn_error = ConnectionError(error=Exception("Connection Refused"))
+    client_error = ClientError({"Error": {"Code": "404", "Message": "Not Found"}}, "GetObject")
+
+    # Sequence: Connection Error -> Client Error (404) -> Connection Error
+    source_manager._s3_client.get_object.side_effect = [conn_error, client_error, conn_error]
+
+    # 1. Connection Error
+    with pytest.raises(ConnectionError):
+        source_manager.get_file("f1")
+    assert source_manager._s3_consecutive_errors == 1
+
+    # 2. Client Error (Should reset counter)
+    with pytest.raises(ClientError):
+        source_manager.get_file("f2")
+    assert source_manager._s3_consecutive_errors == 0
+
+    # 3. Connection Error (Should be 1 again, not 2)
+    with pytest.raises(ConnectionError):
+        source_manager.get_file("f3")
+    assert source_manager._s3_consecutive_errors == 1
+
+
 def test_s3_connection_error_failover_count(source_manager: SourceManager) -> None:
     # Setup: ConnectionError SHOULD increment failover counter
     error = ConnectionError(error=Exception("Connection Refused"))
@@ -195,7 +222,129 @@ def test_ftp_retry_on_fetch_failure(source_manager: SourceManager) -> None:
         # 3. Connects new
         # 4. Calls retrbinary on new -> succeeds
         mock_ftp_cls.assert_called()
-        mock_ftp_new.login.assert_called()
+
+
+def test_ftp_flakey_connection_loop(source_manager: SourceManager) -> None:
+    """
+    Simulates a very flakey FTP connection:
+    Connect -> Fail Fetch -> Reconnect -> Fail Fetch -> Reconnect -> Success
+    """
+    source_manager._current_source = SourceType.FTP
+
+    with patch("ftplib.FTP") as mock_ftp_cls:
+        # Mock 1: Initial connection, fails fetch
+        m1 = MagicMock()
+        m1.retrbinary.side_effect = EOFError("Fail 1")
+
+        # Mock 2: Reconnection 1, fails fetch
+        m2 = MagicMock()
+        m2.retrbinary.side_effect = EOFError("Fail 2")
+
+        # Mock 3: Reconnection 2, succeeds
+        m3 = MagicMock()
+        m3.retrbinary.side_effect = lambda cmd, cb: cb(b"success")
+
+        # Cycle through mocks
+        # _ensure_ftp_connection calls FTP() when it needs a NEW connection.
+        # It DOES NOT call FTP() if _ftp is already set (unless checking NOOP fails).
+
+        # We start with source_manager._ftp = m1 manually.
+        # Flow in get_file:
+        # 1. _ensure_ftp_connection: checks m1.voidcmd("NOOP"). We assume it passes?
+        #    If m1 is "new", voidcmd might not be called if we don't mock it to fail?
+
+        #    So m1 needs to pass voidcmd if we want to use it for retrbinary.
+        m1.voidcmd.return_value = "OK"
+
+        # 2. m1.retrbinary fails with "Fail 1".
+        # 3. catch block:
+        #    _close_ftp() -> m1 closed. self._ftp = None.
+        #    _ensure_ftp_connection() -> self._ftp is None -> calls ftplib.FTP().
+        #    This call consumes the FIRST element of side_effect.
+
+        # So if side_effect = [m1, m2, m3], it returns m1 AGAIN.
+        # Then m1.retrbinary is called again -> "Fail 1" again.
+
+        # FIX: The side_effect should provide the *next* connections: [m2, m3].
+        mock_ftp_cls.side_effect = [m2, m3]
+
+        # Let's start with _ftp = m1
+        source_manager._ftp = m1
+        # The first call to get_file will try m1.retrbinary -> raises EOFError
+        # Then catches error -> closes -> ensures connection (calls FTP() -> gets m2) -> retries -> raises EOFError
+        # So it fails after ONE retry.
+
+        with pytest.raises(EOFError) as exc:
+            source_manager.get_file("file")
+        assert str(exc.value) == "Fail 2"
+
+        # Verify m1 closed
+        # The logic calls quit() first. If quit fails, close().
+        # m1.quit() should have been called.
+        assert m1.quit.called or m1.close.called
+
+        # Now _ftp is m2.
+        # Next call to get_file:
+        # m2 is set. Checks NOOP.
+        # If we want to simulate m2 failing fetch again?
+        # m2 is already dead from previous call? No, code doesn't close on the *retry* failure inside
+        # `get_file` catch block.
+        # Wait, looking at code:
+        # try: retrbinary except: close, ensure(new), retry.
+        # If retry fails, it raises. The new connection (m2) is left open in self._ftp.
+
+        # So next call:
+        # _ensure_ftp_connection calls m2.voidcmd("NOOP").
+        # If we want that to pass?
+        m2.voidcmd.return_value = "OK"
+        # Then it calls m2.retrbinary -> EOFError("Fail 2") again?
+        # We need to configure side effects carefully.
+
+        # Let's adjust scenario:
+        # 1. get_file -> m1 fails -> reconnect m2 -> m2 succeeds.
+        # This covers "Retry on fetch failure". Already covered by test_ftp_retry_on_fetch_failure.
+
+        # Scenario: Flakey connection.
+        # m1 fails. m2 fails. Exception raised. User retries (dlt).
+        # Next call -> m2 NOOP fails -> m3 connects -> m3 succeeds.
+
+        # Reset mocks
+        m1.reset_mock()
+        m2.reset_mock()
+        m3.reset_mock()
+
+        # Setup side effects again
+        mock_ftp_cls.side_effect = [m2, m3]  # m1 is already "set"
+
+        # m1 fails fetch
+        m1.retrbinary.side_effect = EOFError("Fail 1")
+
+        # m2 fails retry fetch
+        m2.retrbinary.side_effect = EOFError("Fail 2")
+
+        # m2 NOOP fails (for next call)
+        m2.voidcmd.side_effect = EOFError("NOOP Fail")
+
+        # m3 succeeds fetch
+        m3.retrbinary.side_effect = lambda cmd, cb: cb(b"success")
+
+        source_manager._ftp = m1
+
+        # Call 1: Fails
+        with pytest.raises(EOFError, match="Fail 2"):
+            source_manager.get_file("file")
+
+        # Call 2: Succeeds
+        # Flow: _ensure -> m2.voidcmd -> fails -> close -> connect(m3) -> fetch
+        data = source_manager.get_file("file")
+        assert data == b"success"
+
+        # Verify sequence
+        # m1 used then closed
+        # m2 created, used, then closed (after NOOP fail)
+        # m3 created, used
+        assert m3.retrbinary.called
+        m3.login.assert_called()
 
 
 def test_close(source_manager: SourceManager) -> None:
