@@ -1,7 +1,10 @@
+import builtins
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from typing import Any
+from unittest.mock import MagicMock, mock_open, patch
 
-from coreason_etl_pubmedcentral.manifest import ManifestRecord
+import dlt
+
 from coreason_etl_pubmedcentral.pipeline_source import pmc_xml_files
 from coreason_etl_pubmedcentral.source_manager import SourceManager
 
@@ -14,37 +17,33 @@ def test_retraction_bypass_high_water_mark() -> None:
     """
     cutoff = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
-    # Record has OLD timestamp (equal to cutoff), but is_retracted=True
-    # Normal logic would skip (cutoff >= last_updated).
-    # We want it to be YIELDED because is_retracted=True.
-    record = ManifestRecord(
-        file_path="oa_comm/xml/PMC_Retracted.xml",
-        accession_id="PMC_Retracted",
-        last_updated=cutoff,  # Same as cutoff
-        pmid="123",
-        license_type="CC0",
-        is_retracted=True,
+    # CSV content representing the record
+    # File Path | Accession ID | Last Updated (UTC) | PMID | License | Retracted
+    csv_content = (
+        "File Path,Accession ID,Last Updated (UTC),PMID,License,Retracted\n"
+        "oa_comm/xml/PMC_Retracted.xml,PMC_Retracted,2024-01-01 12:00:00,123,CC0,yes"
     )
 
     sm = MagicMock(spec=SourceManager)
     sm.get_file.return_value = b"<xml>Retracted</xml>"
-    # Setup the nested property correctly
     type(sm)._current_source = MagicMock(name="_current_source")
     sm._current_source.name = "S3"
 
-    with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest") as mock_parse:
-        mock_parse.return_value = [record]
+    # Use real dlt incremental to avoid mock comparison errors
+    incremental = dlt.sources.incremental("last_updated", initial_value=cutoff)
 
-        # Mock dlt incremental state
-        last_updated_mock = MagicMock()
-        last_updated_mock.start_value = cutoff
+    # Mock open with side_effect
+    real_open = builtins.open
 
-        # Mock open
-        with patch("builtins.open", new_callable=MagicMock):
-            gen = pmc_xml_files(manifest_file_path="dummy.csv", source_manager=sm, last_updated=last_updated_mock)
-            items = list(gen)
+    def conditional_open(file: str | bytes | int, *args: Any, **kwargs: Any) -> Any:
+        if file == "dummy.csv":
+            return mock_open(read_data=csv_content)(file, *args, **kwargs)
+        return real_open(file, *args, **kwargs)
 
-    # If the logic is strictly following "Delta", this will be empty (current behavior).
-    # We want it to be 1.
+    with patch("builtins.open", side_effect=conditional_open):
+        # We do NOT patch parse_manifest, we want to test its logic
+        gen = pmc_xml_files(manifest_file_path="dummy.csv", source_manager=sm, last_updated=incremental)
+        items = list(gen)
+
     assert len(items) == 1
     assert items[0]["manifest_metadata"]["is_retracted"] is True
