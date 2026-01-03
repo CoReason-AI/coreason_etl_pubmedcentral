@@ -11,7 +11,7 @@
 from typing import Any
 from unittest.mock import patch
 
-from coreason_etl_pubmedcentral.pipeline_gold import _pmc_gold_generator, transform_gold_record
+from coreason_etl_pubmedcentral.pipeline_gold import _pmc_gold_generator, pmc_gold, transform_gold_record
 
 
 def test_gold_transformation_full_record() -> None:
@@ -310,3 +310,12 @@ def test_gold_robust_null_handling() -> None:
     assert gold["agency_names"] == ["A1"]
     # Grant IDs: Empty
     assert gold["grant_ids"] == []
+
+
+def test_pmc_gold_resource_name() -> None:
+    """
+    Verify that the DLT transformer name matches the specification.
+    Spec: Table Name: gold_pmc_analytics_rich
+    """
+    # The name attribute of the resource object holds the table name
+    assert pmc_gold.name == "gold_pmc_analytics_rich"
