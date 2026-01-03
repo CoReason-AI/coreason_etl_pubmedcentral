@@ -29,8 +29,8 @@ def test_gold_transformation_full_record() -> None:
         "journal_name": "Journal of Testing",
         "keywords": ["test", "etl"],
         "authors": [
-            {"surname": "Doe", "given_names": "John", "affiliations": ["University A"]},
-            {"surname": "Smith", "given_names": "Jane", "affiliations": ["University A", "Institute B"]},
+            {"name": "Doe John", "affiliations": ["University A"]},
+            {"name": "Smith Jane", "affiliations": ["University A", "Institute B"]},
         ],
         "funding": [
             {"agency": "NIH", "grant_id": "G1"},
@@ -128,10 +128,10 @@ def test_gold_authors_affiliations() -> None:
 
     rec = {
         "authors": [
-            {"surname": "A", "given_names": "B", "affiliations": ["U1"]},
-            {"surname": "C", "given_names": None, "affiliations": ["U1", "U2"]},
-            {"surname": None, "given_names": "D", "affiliations": []},
-            {"surname": None, "given_names": None, "affiliations": ["U3"]},  # No name, just aff
+            {"name": "A B", "affiliations": ["U1"]},
+            {"name": "C", "affiliations": ["U1", "U2"]},
+            {"name": "D", "affiliations": []},
+            {"name": None, "affiliations": ["U3"]},  # No name, just aff
         ]
     }
 
@@ -215,8 +215,8 @@ def test_gold_complex_unicode_and_special_chars() -> None:
         "pmcid": "123",
         "title": "Title with üñîçødę",
         "authors": [
-            {"surname": "Müller", "given_names": "Jürgen", "affiliations": ["Universität München"]},
-            {"surname": "O'Connor", "given_names": "Renée", "affiliations": []},
+            {"name": "Müller Jürgen", "affiliations": ["Universität München"]},
+            {"name": "O'Connor Renée", "affiliations": []},
         ],
         "funding": [{"agency": "Fünding Agency €", "grant_id": "GR#123&456"}],
     }
@@ -237,8 +237,8 @@ def test_gold_deduplication_logic() -> None:
     rec: dict[str, Any] = {
         "pmcid": "123",
         "authors": [
-            {"surname": "A", "given_names": "B", "affiliations": ["U1", "U1", "U2"]},  # Duplicate in list
-            {"surname": "C", "given_names": "D", "affiliations": ["U2", "U3"]},  # Overlap
+            {"name": "A B", "affiliations": ["U1", "U1", "U2"]},  # Duplicate in list
+            {"name": "C D", "affiliations": ["U2", "U3"]},  # Overlap
         ],
         "funding": [
             {"agency": "A1", "grant_id": "G1"},
@@ -288,8 +288,8 @@ def test_gold_robust_null_handling() -> None:
     rec: dict[str, Any] = {
         "pmcid": "123",
         "authors": [
-            {"surname": None, "given_names": None, "affiliations": [None, ""]},  # Should be ignored/empty
-            {"surname": "Valid", "given_names": None, "affiliations": ["U1"]},
+            {"name": None, "affiliations": [None, ""]},  # Should be ignored/empty
+            {"name": "Valid", "affiliations": ["U1"]},
         ],
         "funding": [
             {"agency": None, "grant_id": None},  # Should be ignored
