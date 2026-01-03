@@ -122,7 +122,7 @@ def test_ingestion_date_midnight_rollover() -> None:
     # Define selective mock open
     real_open = builtins.open
 
-    def conditional_open(file: Any, *args: Any, **kwargs: Any) -> Any:
+    def conditional_open(file: str | bytes | int, *args: Any, **kwargs: Any) -> Any:
         if file == "manifest.csv":
             return mock_open(read_data="header\nline")(file, *args, **kwargs)
         return real_open(file, *args, **kwargs)
