@@ -8,11 +8,8 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
-import logging
-from typing import Any, Generator
-from unittest.mock import MagicMock
+from typing import Generator
 
-import pendulum
 import pytest
 from dlt.common import pendulum as dlt_pendulum
 
