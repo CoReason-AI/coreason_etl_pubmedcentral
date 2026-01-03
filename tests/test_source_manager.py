@@ -16,6 +16,16 @@ import pytest
 from botocore.exceptions import ClientError, ConnectionError
 
 from coreason_etl_pubmedcentral.source_manager import SourceManager, SourceType
+from coreason_etl_pubmedcentral.utils.logger import logger
+
+
+@pytest.fixture  # type: ignore[misc]
+def log_capture() -> Any:
+    """Captures loguru logs."""
+    logs = []
+    handler_id = logger.add(lambda msg: logs.append(msg), format="{message}", level="INFO")
+    yield logs
+    logger.remove(handler_id)
 
 
 @pytest.fixture  # type: ignore[misc]
@@ -101,7 +111,7 @@ def test_s3_connection_error_failover_count(source_manager: SourceManager) -> No
     assert source_manager._s3_consecutive_errors == 0
 
 
-def test_s3_failover(source_manager: SourceManager) -> None:
+def test_s3_failover(source_manager: SourceManager, log_capture: list[str]) -> None:
     # Setup: 3 consecutive Connection errors
     error = ConnectionError(error=Exception("Connection Refused"))
     source_manager._s3_client.get_object.side_effect = [error, error, error]
@@ -137,6 +147,9 @@ def test_s3_failover(source_manager: SourceManager) -> None:
         # Verify full path construction
         args, _ = mock_ftp.retrbinary.call_args
         assert args[0] == "RETR /pub/pmc/f3"
+
+        # Verify Log Message (Strict Format)
+        assert any("FailoverEvent — S3 unreachable. Switched to FTP" in msg and "f3" in msg for msg in log_capture)
 
 
 def test_ftp_direct_usage_after_failover(source_manager: SourceManager) -> None:

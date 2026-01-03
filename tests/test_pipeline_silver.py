@@ -95,7 +95,7 @@ def test_transform_silver_record_success(sample_bronze_record: dict[str, Any]) -
 
     # Check Authors
     assert len(record["authors"]) == 1
-    assert record["authors"][0]["surname"] == "Doe"
+    assert record["authors"][0]["name"] == "Doe John"
     assert record["authors"][0]["affiliations"] == ["University of Test"]
 
     # Check Retraction (False)
@@ -118,7 +118,7 @@ def test_transform_silver_record_retraction_logging(
     assert record["is_retracted"] is True
 
     # Verify Log
-    assert any("RetractionFound - Marking 12345 as retracted based on manifest." in msg for msg in log_capture)
+    assert any("RetractionFound — Marking 12345 as retracted based on manifest." in msg for msg in log_capture)
 
 
 def test_transform_silver_record_schema_violation_logging(
@@ -140,7 +140,7 @@ def test_transform_silver_record_schema_violation_logging(
     record = transform_silver_record(sample_bronze_record)
 
     assert record is not None
-    assert any("SchemaViolation - Article 12345 missing mandatory 'title' field." in msg for msg in log_capture)
+    assert any("SchemaViolation — Article 12345 missing mandatory 'title' field." in msg for msg in log_capture)
 
     # Clear logs for next assertion
     log_capture.clear()
@@ -161,7 +161,7 @@ def test_transform_silver_record_schema_violation_logging(
 
     transform_silver_record(sample_bronze_record)
 
-    assert any("SchemaViolation - Article missing mandatory 'pmcid' field." in msg for msg in log_capture)
+    assert any("SchemaViolation — Article missing mandatory 'pmcid' field." in msg for msg in log_capture)
 
 
 def test_transform_silver_record_malformed_xml(sample_bronze_record: dict[str, Any]) -> None:
@@ -206,7 +206,7 @@ def test_transform_silver_record_unicode(sample_bronze_record: dict[str, Any]) -
 
     record = transform_silver_record(sample_bronze_record)
     assert record is not None
-    assert record["authors"][0]["surname"] == "Müller"
+    assert record["authors"][0]["name"] == "Müller"
 
 
 def test_transform_silver_record_xml_syntax_error(sample_bronze_record: dict[str, Any]) -> None:
@@ -337,9 +337,9 @@ def test_silver_complex_entities(sample_bronze_record: dict[str, Any]) -> None:
 
     # Authors
     assert len(record["authors"]) == 2
-    assert record["authors"][0]["surname"] == "A"
+    assert record["authors"][0]["name"] == "A One"
     assert sorted(record["authors"][0]["affiliations"]) == ["Univ A", "Univ B"]
-    assert record["authors"][1]["surname"] == "B"
+    assert record["authors"][1]["name"] == "B Two"
     assert record["authors"][1]["affiliations"] == ["Univ B"]
 
     # Funding

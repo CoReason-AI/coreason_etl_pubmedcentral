@@ -59,18 +59,10 @@ def transform_gold_record(item: dict[str, Any]) -> Optional[dict[str, Any]]:
     affiliations_set: set[str] = set()
 
     for auth in authors:
-        surname = auth.get("surname")
-        given = auth.get("given_names")
+        name = auth.get("name")
 
-        # Construct name string
-        name_parts = []
-        if surname:
-            name_parts.append(surname)
-        if given:
-            name_parts.append(given)
-
-        if name_parts:
-            authors_display_list.append(" ".join(name_parts))
+        if name:
+            authors_display_list.append(name)
 
         # Collect affiliations
         affs = auth.get("affiliations", [])

@@ -40,7 +40,10 @@ def pmc_source(
     return pmc_xml_files(manifest_file_path, remote_manifest_path, source_manager)
 
 
-@dlt.resource(write_disposition="append")  # type: ignore[misc]
+@dlt.resource(
+    write_disposition="append",
+    columns={"ingestion_date": {"data_type": "date", "partition": True}},
+)  # type: ignore[misc]
 def pmc_xml_files(
     manifest_file_path: str,
     remote_manifest_path: Optional[str] = None,
@@ -100,9 +103,11 @@ def pmc_xml_files(
                     # Convert datetime objects to ISO strings for JSON serialization compatibility
                     manifest_metadata["last_updated"] = record.last_updated.isoformat()
 
+                    current_ts = datetime.now(timezone.utc)
                     yield {
                         "source_file_path": record.file_path,
-                        "ingestion_ts": datetime.now(timezone.utc),
+                        "ingestion_ts": current_ts,
+                        "ingestion_date": current_ts.date(),
                         "ingestion_source": source_manager._current_source.name,
                         "raw_xml_payload": raw_xml,
                         "manifest_metadata": manifest_metadata,
