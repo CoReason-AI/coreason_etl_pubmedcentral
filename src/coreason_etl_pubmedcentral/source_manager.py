@@ -80,7 +80,7 @@ class SourceManager:
 
                 if self._s3_consecutive_errors >= self.FAILOVER_THRESHOLD:
                     logger.info(
-                        f"S3 unreachable. Switched to FTP for batch/subsequent requests. "
+                        f"FailoverEvent — S3 unreachable. Switched to FTP for batch/subsequent requests. "
                         f"Triggered by failure on {file_path}"
                     )
                     self._current_source = SourceType.FTP

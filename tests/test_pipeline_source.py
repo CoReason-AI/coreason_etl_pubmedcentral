@@ -76,6 +76,8 @@ def test_pmc_xml_files_happy_path(mock_source_manager: MagicMock) -> None:
 
             assert item["source_file_path"] == "oa_comm/xml/PMC1.xml"
             assert item["ingestion_source"] == "S3"
+            assert "ingestion_date" in item
+            assert item["ingestion_date"] == item["ingestion_ts"].date()
             assert item["raw_xml_payload"] == "<article>Content</article>"
             assert item["manifest_metadata"]["accession_id"] == "PMC1"
             assert item["manifest_metadata"]["last_updated"] == "2024-01-01T12:00:00+00:00"
