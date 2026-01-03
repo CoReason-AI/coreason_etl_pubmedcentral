@@ -142,7 +142,7 @@ def _pmc_gold_generator(items: Iterator[dict[str, Any]]) -> Iterator[dict[str, A
             pass
 
 
-@dlt.transformer(name="pmc_gold", write_disposition="merge", primary_key="pmcid")  # type: ignore[misc]
+@dlt.transformer(name="gold_pmc_analytics_rich", write_disposition="merge", primary_key="pmcid")  # type: ignore[misc]
 def pmc_gold(items: Iterator[dict[str, Any]]) -> Iterator[dict[str, Any]]:  # pragma: no cover
     """
     Gold Layer Transformer.
