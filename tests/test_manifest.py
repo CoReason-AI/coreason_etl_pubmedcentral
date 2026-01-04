@@ -65,9 +65,12 @@ def test_parse_manifest_exact_cutoff(valid_csv_lines: Iterator[str]) -> None:
     cutoff = datetime(2024, 1, 2, 10, 0, 0, tzinfo=timezone.utc)
     records = list(parse_manifest(valid_csv_lines, last_ingested_cutoff=cutoff))
 
-    # Should exclude 1st and 2nd (<= cutoff)
-    assert len(records) == 1
-    assert records[0].accession_id == "PMC3"
+    # Should exclude 1st (<= cutoff and not retracted)
+    # Should include 2nd (<= cutoff BUT RETRACTED - Priority Logic)
+    # Should include 3rd (> cutoff)
+    assert len(records) == 2
+    assert records[0].accession_id == "PMC2"  # Retracted, bypasses filter
+    assert records[1].accession_id == "PMC3"  # Newer than cutoff
 
 
 def test_parse_manifest_invalid_date() -> None:

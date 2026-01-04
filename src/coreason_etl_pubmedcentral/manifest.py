@@ -80,6 +80,9 @@ def parse_manifest(lines: Iterator[str], last_ingested_cutoff: Optional[datetime
         license_type = row[4].strip()
         retracted_str = row[5].strip().lower()
 
+        # Parse Retracted (Moved up for priority filtering)
+        is_retracted = retracted_str == "yes"
+
         # Parse Timestamp
         # Format assumed: YYYY-MM-DD HH:MM:SS (UTC)
         # We need to handle potential format variations if any, but start strict.
@@ -94,14 +97,14 @@ def parse_manifest(lines: Iterator[str], last_ingested_cutoff: Optional[datetime
             continue
 
         # Filter by High Water Mark
+        # Exception: Always yield retracted records to ensure we catch status updates
+        # even if the timestamp didn't bump (Retraction Watch safety).
         if last_ingested_cutoff and last_updated <= last_ingested_cutoff:
-            continue
+            if not is_retracted:
+                continue
 
         # Parse PMID (Nullable)
         pmid = pmid_str if pmid_str else None
-
-        # Parse Retracted
-        is_retracted = retracted_str == "yes"
 
         yield ManifestRecord(
             file_path=file_path,
