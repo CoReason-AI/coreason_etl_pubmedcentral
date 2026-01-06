@@ -78,7 +78,8 @@ def test_pmc_xml_files_happy_path(mock_source_manager: MagicMock) -> None:
             assert item["ingestion_source"] == "S3"
             assert "ingestion_date" in item
             assert item["ingestion_date"] == item["ingestion_ts"].date()
-            assert item["raw_xml_payload"] == "<article>Content</article>"
+            # UPDATED: Expect bytes now, not string
+            assert item["raw_xml_payload"] == b"<article>Content</article>"
             assert item["manifest_metadata"]["accession_id"] == "PMC1"
             assert item["manifest_metadata"]["last_updated"] == "2024-01-01T12:00:00+00:00"
             assert item["last_updated"] == record.last_updated
@@ -291,7 +292,7 @@ def test_pmc_xml_files_mixed_batch(mock_source_manager: MagicMock) -> None:
     Test processing a mixed batch of files:
     1. Success
     2. Download Failure
-    3. Decode Failure (UTF-8)
+    3. Decode Failure (UTF-8) -- UPDATED: Should NOT fail anymore if we just pass bytes!
     4. Success
     """
     records = [
@@ -304,16 +305,15 @@ def test_pmc_xml_files_mixed_batch(mock_source_manager: MagicMock) -> None:
     # Side effects for get_file:
     # 1. Success
     # 2. Exception
-    # 3. Success (bytes) but...
+    # 3. Success (bytes) -- was invalid utf-8, but now we yield bytes, so it should succeed in Bronze!
+    #    However, Silver might fail to parse it if it's invalid XML.
+    #    But for Bronze ingestion, it is a SUCCESS.
     # 4. Success
-
-    # For file3, we return bytes that fail decoding.
-    # b"\x80" is invalid start byte in UTF-8
 
     mock_source_manager.get_file.side_effect = [
         b"<doc>1</doc>",
         Exception("Download Error"),
-        b"\x80",
+        b"\xff\xfe",  # Invalid UTF-8 but valid bytes
         b"<doc>4</doc>",
     ]
 
@@ -327,27 +327,32 @@ def test_pmc_xml_files_mixed_batch(mock_source_manager: MagicMock) -> None:
                 inc = dlt.sources.incremental("last_updated")
                 items = list(pmc_xml_files("path.csv", source_manager=mock_source_manager, last_updated=inc))
 
-                # Verify only 2 successful items yielded
-                assert len(items) == 2
+                # Verify 3 successful items yielded (1, 3, 4)
+                # Item 3 is now yielded because we don't decode it here.
+                assert len(items) == 3
                 assert items[0]["manifest_metadata"]["accession_id"] == "PMC1"
-                assert items[1]["manifest_metadata"]["accession_id"] == "PMC4"
+                assert items[1]["manifest_metadata"]["accession_id"] == "PMC3"
+                assert items[2]["manifest_metadata"]["accession_id"] == "PMC4"
+
+                # Verify bytes
+                assert items[1]["raw_xml_payload"] == b"\xff\xfe"
 
                 # Verify logs
-                # Should have exception logs for file2 and file3
-                assert mock_context_logger.exception.call_count >= 2
+                # Should have exception logs for file2 ONLY
+                assert mock_context_logger.exception.call_count >= 1
 
                 # Check call args to verify file paths involved
                 error_calls = mock_context_logger.exception.call_args_list
                 assert any("file2.xml" in str(call.args) for call in error_calls)
-                assert any("file3.xml" in str(call.args) for call in error_calls)
+                # file3 should NOT error here anymore
 
 
 def test_pmc_xml_files_utf8_decode_error(mock_source_manager: MagicMock) -> None:
-    """Explicitly test handling of invalid UTF-8."""
+    """Explicitly test handling of invalid UTF-8. Should now succeed in Bronze."""
     record = ManifestRecord("bad_enc.xml", "PMC1", datetime.now(timezone.utc), None, "CC0", False)
 
-    # Return invalid utf-8
-    mock_source_manager.get_file.return_value = b"\xff\xfe\x00\x00"  # UTF-32 BOM or garbage
+    # Return invalid utf-8 (but valid bytes)
+    mock_source_manager.get_file.return_value = b"\xff\xfe\x00\x00"
 
     with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[record]):
         with patch("builtins.open", mock_open()):
@@ -359,8 +364,11 @@ def test_pmc_xml_files_utf8_decode_error(mock_source_manager: MagicMock) -> None
                 inc = dlt.sources.incremental("last_updated")
                 items = list(pmc_xml_files("path.csv", source_manager=mock_source_manager, last_updated=inc))
 
-                assert len(items) == 0
-                mock_context_logger.exception.assert_called()
+                # Should yield the item as bytes
+                assert len(items) == 1
+                assert items[0]["raw_xml_payload"] == b"\xff\xfe\x00\x00"
+                # No exception logged
+                mock_context_logger.exception.assert_not_called()
 
 
 def test_pmc_xml_files_source_change_tracking(mock_source_manager: MagicMock) -> None:
