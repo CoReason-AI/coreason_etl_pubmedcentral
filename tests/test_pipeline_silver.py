@@ -126,6 +126,7 @@ def test_transform_silver_record_string_input_fallback(sample_bronze_record: dic
 
 def test_transform_silver_record_unexpected_type_fallback(sample_bronze_record: dict[str, Any]) -> None:
     """Test fallback for unexpected types (e.g. bytearray or other objects)."""
+
     # Assuming the object has a reasonable string representation
     class WeirdObject:
         def __str__(self) -> str:
