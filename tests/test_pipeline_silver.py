@@ -59,11 +59,12 @@ def sample_xml_content() -> str:
 
 @pytest.fixture  # type: ignore[misc]
 def sample_bronze_record(sample_xml_content: str) -> dict[str, Any]:
+    # Update to use bytes for raw_xml_payload as per new Bronze contract
     return {
         "source_file_path": "oa_comm/xml/PMC12345.xml",
         "ingestion_ts": pendulum.now(),
         "ingestion_source": "S3",
-        "raw_xml_payload": sample_xml_content,
+        "raw_xml_payload": sample_xml_content.encode("utf-8"),  # Store as bytes
         "manifest_metadata": {
             "file_path": "oa_comm/xml/PMC12345.xml",
             "accession_id": "PMC12345",
@@ -106,6 +107,36 @@ def test_transform_silver_record_success(sample_bronze_record: dict[str, Any]) -
     assert record["manifest_metadata"]["accession_id"] == "PMC12345"
 
 
+def test_transform_silver_record_bytes_input(sample_bronze_record: dict[str, Any]) -> None:
+    """Explicit test for bytes input handling."""
+    sample_bronze_record["raw_xml_payload"] = b"<article></article>"
+    # This will result in empty record but shouldn't crash
+    # Well, it has no ID, so it will log warning but succeed transformation (if valid xml)
+    # Actually, <article> is valid XML.
+    record = transform_silver_record(sample_bronze_record)
+    assert record is not None
+
+
+def test_transform_silver_record_string_input_fallback(sample_bronze_record: dict[str, Any]) -> None:
+    """Test fallback for legacy string input."""
+    sample_bronze_record["raw_xml_payload"] = "<article></article>"  # String
+    record = transform_silver_record(sample_bronze_record)
+    assert record is not None
+
+
+def test_transform_silver_record_unexpected_type_fallback(sample_bronze_record: dict[str, Any]) -> None:
+    """Test fallback for unexpected types (e.g. bytearray or other objects)."""
+
+    # Assuming the object has a reasonable string representation
+    class WeirdObject:
+        def __str__(self) -> str:
+            return "<article></article>"
+
+    sample_bronze_record["raw_xml_payload"] = WeirdObject()
+    record = transform_silver_record(sample_bronze_record)
+    assert record is not None
+
+
 def test_transform_silver_record_retraction_logging(
     sample_bronze_record: dict[str, Any], log_capture: list[str]
 ) -> None:
@@ -135,7 +166,7 @@ def test_transform_silver_record_schema_violation_logging(
         </front>
     </article>
     """
-    sample_bronze_record["raw_xml_payload"] = xml
+    sample_bronze_record["raw_xml_payload"] = xml.encode("utf-8")
 
     record = transform_silver_record(sample_bronze_record)
 
@@ -157,7 +188,7 @@ def test_transform_silver_record_schema_violation_logging(
         </front>
     </article>
     """
-    sample_bronze_record["raw_xml_payload"] = xml_no_id
+    sample_bronze_record["raw_xml_payload"] = xml_no_id.encode("utf-8")
 
     transform_silver_record(sample_bronze_record)
 
@@ -167,21 +198,21 @@ def test_transform_silver_record_schema_violation_logging(
 def test_transform_silver_record_malformed_xml(sample_bronze_record: dict[str, Any]) -> None:
     # Malformed XML (raises XMLSyntaxError usually, but iterparse might catch it or raise it)
     # We catch XMLSyntaxError explicitly.
-    sample_bronze_record["raw_xml_payload"] = "<article>Unclosed tag"
+    sample_bronze_record["raw_xml_payload"] = b"<article>Unclosed tag"
 
     record = transform_silver_record(sample_bronze_record)
     assert record is None
 
 
 def test_transform_silver_record_empty_xml(sample_bronze_record: dict[str, Any]) -> None:
-    sample_bronze_record["raw_xml_payload"] = ""
+    sample_bronze_record["raw_xml_payload"] = b""
     record = transform_silver_record(sample_bronze_record)
     assert record is None
 
 
 def test_transform_silver_record_no_article_tag(sample_bronze_record: dict[str, Any]) -> None:
     # Valid XML but no article tag
-    sample_bronze_record["raw_xml_payload"] = "<root><foo>bar</foo></root>"
+    sample_bronze_record["raw_xml_payload"] = b"<root><foo>bar</foo></root>"
 
     record = transform_silver_record(sample_bronze_record)
     assert record is None
@@ -202,7 +233,7 @@ def test_transform_silver_record_unicode(sample_bronze_record: dict[str, Any]) -
         </front>
     </article>
     """
-    sample_bronze_record["raw_xml_payload"] = xml
+    sample_bronze_record["raw_xml_payload"] = xml.encode("utf-8")
 
     record = transform_silver_record(sample_bronze_record)
     assert record is not None
@@ -236,7 +267,7 @@ def test_pmc_silver_generator_iteration(sample_bronze_record: dict[str, Any]) ->
     # 3. Good record
 
     bad_record = sample_bronze_record.copy()
-    bad_record["raw_xml_payload"] = "bad"
+    bad_record["raw_xml_payload"] = b"bad"
 
     items = [sample_bronze_record, bad_record, sample_bronze_record]
 
@@ -262,7 +293,7 @@ def test_memory_clearing_pattern(sample_bronze_record: dict[str, Any]) -> None:
         </article>
     </root>
     """
-    sample_bronze_record["raw_xml_payload"] = xml
+    sample_bronze_record["raw_xml_payload"] = xml.encode("utf-8")
 
     # The transform should still work and find the article
     # And specifically, since there is a <dummy> sibling before <article>,
@@ -285,7 +316,7 @@ def test_silver_minimal_article(sample_bronze_record: dict[str, Any]) -> None:
         </front>
     </article>
     """
-    sample_bronze_record["raw_xml_payload"] = xml
+    sample_bronze_record["raw_xml_payload"] = xml.encode("utf-8")
     record = transform_silver_record(sample_bronze_record)
 
     assert record is not None
@@ -330,7 +361,7 @@ def test_silver_complex_entities(sample_bronze_record: dict[str, Any]) -> None:
         </front>
     </article>
     """
-    sample_bronze_record["raw_xml_payload"] = xml
+    sample_bronze_record["raw_xml_payload"] = xml.encode("utf-8")
     record = transform_silver_record(sample_bronze_record)
 
     assert record is not None
@@ -366,7 +397,7 @@ def test_silver_date_logic(sample_bronze_record: dict[str, Any]) -> None:
         </front>
     </article>
     """
-    sample_bronze_record["raw_xml_payload"] = xml
+    sample_bronze_record["raw_xml_payload"] = xml.encode("utf-8")
     record = transform_silver_record(sample_bronze_record)
 
     assert record is not None
@@ -385,7 +416,7 @@ def test_silver_legacy_funding(sample_bronze_record: dict[str, Any]) -> None:
         </front>
     </article>
     """
-    sample_bronze_record["raw_xml_payload"] = xml
+    sample_bronze_record["raw_xml_payload"] = xml.encode("utf-8")
     record = transform_silver_record(sample_bronze_record)
 
     assert record is not None
