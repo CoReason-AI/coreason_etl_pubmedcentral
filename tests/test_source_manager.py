@@ -600,6 +600,7 @@ def test_ftp_timeout_during_transfer(source_manager: SourceManager) -> None:
         # Verify reconnection happened
         mock_ftp_cls.assert_called()
 
+
 def test_ftp_retry_cleans_buffer(source_manager: SourceManager) -> None:
     """
     Verify that if a fetch fails after writing partial data, the buffer is reset
@@ -610,6 +611,7 @@ def test_ftp_retry_cleans_buffer(source_manager: SourceManager) -> None:
     with patch("ftplib.FTP") as mock_ftp_cls:
         # Mock 1: Writes partial data then fails
         mock_ftp_1 = MagicMock()
+
         def side_effect_partial(cmd: str, callback: Any) -> None:
             callback(b"partial_junk")
             raise EOFError("Cut off mid-stream")
@@ -620,6 +622,7 @@ def test_ftp_retry_cleans_buffer(source_manager: SourceManager) -> None:
 
         # Mock 2: Success
         mock_ftp_2 = MagicMock()
+
         def side_effect_success(cmd: str, callback: Any) -> None:
             callback(b"full_content")
 
