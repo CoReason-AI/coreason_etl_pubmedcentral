@@ -552,3 +552,62 @@ def test_bronze_partitioning_compliance(mock_source_manager: MagicMock) -> None:
                 # Check Date
                 assert item["ingestion_date"] == fixed_ts.date()
                 assert str(item["ingestion_date"]) == "2025-01-01"
+
+
+def test_bronze_partitioning_midnight_boundary(mock_source_manager: MagicMock) -> None:
+    """
+    Verify that if processing runs across a UTC midnight boundary,
+    records are assigned to their respective partitions correctly.
+    """
+    # 1. Setup timestamps: One just before midnight, one just after
+    ts_before = datetime(2023, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+    ts_after = datetime(2024, 1, 1, 0, 0, 1, tzinfo=timezone.utc)
+
+    # 2. Setup mock records
+    records = [
+        ManifestRecord("file1.xml", "PMC1", ts_before, None, "CC0", False),
+        ManifestRecord("file2.xml", "PMC2", ts_after, None, "CC0", False),
+    ]
+
+    mock_source_manager.get_file.return_value = b"<root/>"
+
+    # 3. Patch datetime.now to return sequence
+    with patch("coreason_etl_pubmedcentral.pipeline_source.datetime") as mock_dt:
+        mock_dt.now.side_effect = [ts_before, ts_after]
+        mock_dt.fromisoformat.side_effect = datetime.fromisoformat
+
+        with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=records):
+            with patch("builtins.open", mock_open()):
+                inc = dlt.sources.incremental("last_updated")
+                items = list(pmc_xml_files("dummy.csv", source_manager=mock_source_manager, last_updated=inc))
+
+                assert len(items) == 2
+
+                # Verify First Item (2023)
+                assert items[0]["ingestion_ts"] == ts_before
+                assert str(items[0]["ingestion_date"]) == "2023-12-31"
+
+                # Verify Second Item (2024)
+                assert items[1]["ingestion_ts"] == ts_after
+                assert str(items[1]["ingestion_date"]) == "2024-01-01"
+
+
+def test_bronze_partitioning_leap_year(mock_source_manager: MagicMock) -> None:
+    """
+    Verify correct date extraction for Leap Day (Feb 29).
+    """
+    leap_ts = datetime(2024, 2, 29, 12, 0, 0, tzinfo=timezone.utc)
+    record = ManifestRecord("file1.xml", "PMC1", leap_ts, None, "CC0", False)
+    mock_source_manager.get_file.return_value = b"<root/>"
+
+    with patch("coreason_etl_pubmedcentral.pipeline_source.datetime") as mock_dt:
+        mock_dt.now.return_value = leap_ts
+        mock_dt.fromisoformat.side_effect = datetime.fromisoformat
+
+        with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[record]):
+            with patch("builtins.open", mock_open()):
+                inc = dlt.sources.incremental("last_updated")
+                items = list(pmc_xml_files("dummy.csv", source_manager=mock_source_manager, last_updated=inc))
+
+                assert len(items) == 1
+                assert str(items[0]["ingestion_date"]) == "2024-02-29"
