@@ -14,6 +14,7 @@ from enum import Enum, auto
 from typing import Optional
 
 import boto3
+import tenacity
 from botocore import UNSIGNED
 from botocore.config import Config
 from botocore.exceptions import (
@@ -114,34 +115,44 @@ class SourceManager:
         response = self._s3_client.get_object(Bucket=self.S3_BUCKET, Key=file_path)
         return response["Body"].read()  # type: ignore
 
+    def _reconnect_ftp_before_retry(self, retry_state: "tenacity.RetryCallState") -> None:
+        """Callback to reconnect FTP before retrying."""
+        # Log the exception that caused the retry
+        exc = retry_state.outcome.exception()
+        logger.warning(f"FTP error fetching file: {exc}. Attempting reconnect.")
+        self._close_ftp()
+        self._ensure_ftp_connection()
+
+    @tenacity.retry(
+        stop=tenacity.stop_after_attempt(2),
+        retry=tenacity.retry_if_exception_type(ftplib.all_errors + (EOFError, TimeoutError, OSError)),
+        before_sleep=lambda rs: rs.args[0]._reconnect_ftp_before_retry(rs),
+        reraise=True,
+    )  # type: ignore[misc]
+    def _fetch_ftp_retryable(self, full_path: str, bio: io.BytesIO) -> None:
+        """
+        Fetches file from FTP with automatic retry via tenacity.
+        """
+        # Ensure buffer is clean for every attempt (prevents corruption on retry after partial write)
+        bio.seek(0)
+        bio.truncate()
+
+        self._ensure_ftp_connection()
+        if not self._ftp:
+            raise RuntimeError("FTP connection could not be established.")
+        self._ftp.retrbinary(f"RETR {full_path}", bio.write)
+
     def _fetch_ftp(self, file_path: str) -> bytes:
         """
         Fetches file from FTP, handling connection persistence and reconnection.
         """
-        self._ensure_ftp_connection()
-        if not self._ftp:
-            raise RuntimeError("FTP connection could not be established.")
-
         # Full path on FTP: /pub/pmc/ + file_path
         # file_path e.g. "oa_comm/xml/PMC12345.xml"
         # full path: "/pub/pmc/oa_comm/xml/PMC12345.xml"
-        # We need to be careful about slashes.
         full_path = f"{self.FTP_BASE_PATH.rstrip('/')}/{file_path.lstrip('/')}"
 
         bio = io.BytesIO()
-        try:
-            self._ftp.retrbinary(f"RETR {full_path}", bio.write)
-        except ftplib.all_errors + (EOFError,) as e:
-            logger.warning(f"FTP error fetching {full_path}: {e}. Attempting reconnect.")
-            # Try to reconnect once
-            self._close_ftp()
-            self._ensure_ftp_connection()
-            if not self._ftp:
-                raise e
-            # Retry fetch
-            bio = io.BytesIO()  # Reset buffer
-            self._ftp.retrbinary(f"RETR {full_path}", bio.write)
-
+        self._fetch_ftp_retryable(full_path, bio)
         return bio.getvalue()
 
     def _ensure_ftp_connection(self) -> None:
