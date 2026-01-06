@@ -10,7 +10,7 @@
 
 from datetime import datetime, timezone
 from typing import Any
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
 
 import dlt
 import pytest
@@ -28,7 +28,7 @@ def mock_source_manager() -> MagicMock:
     return sm
 
 
-def test_pipeline_source_emits_success_metrics(mock_source_manager: MagicMock) -> None:
+def test_pipeline_source_emits_success_metrics(mock_source_manager: MagicMock, mock_manifest_open: Any) -> None:
     # Setup
     manifest_path = "dummy_manifest.csv"
     record = ManifestRecord(
@@ -50,7 +50,7 @@ def test_pipeline_source_emits_success_metrics(mock_source_manager: MagicMock) -
 
     try:
         with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[record]):
-            with patch("builtins.open", mock_open(read_data="header\nline")):
+            with patch("builtins.open", side_effect=mock_manifest_open(read_data="header\nline")):
                 inc = dlt.sources.incremental("last_updated")
                 list(pmc_xml_files(manifest_path, source_manager=mock_source_manager, last_updated=inc))
 
@@ -69,7 +69,7 @@ def test_pipeline_source_emits_success_metrics(mock_source_manager: MagicMock) -
         app_logger.remove(handler_id)
 
 
-def test_pipeline_source_emits_failure_metrics(mock_source_manager: MagicMock) -> None:
+def test_pipeline_source_emits_failure_metrics(mock_source_manager: MagicMock, mock_manifest_open: Any) -> None:
     # Setup
     manifest_path = "dummy_manifest.csv"
     record = ManifestRecord(
@@ -91,7 +91,7 @@ def test_pipeline_source_emits_failure_metrics(mock_source_manager: MagicMock) -
 
     try:
         with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[record]):
-            with patch("builtins.open", mock_open(read_data="header\nline")):
+            with patch("builtins.open", side_effect=mock_manifest_open(read_data="header\nline")):
                 inc = dlt.sources.incremental("last_updated")
                 list(pmc_xml_files(manifest_path, source_manager=mock_source_manager, last_updated=inc))
 
@@ -110,10 +110,9 @@ def test_pipeline_source_emits_failure_metrics(mock_source_manager: MagicMock) -
         app_logger.remove(handler_id)
 
 
-def test_pipeline_source_metrics_failover_scenario(mock_source_manager: MagicMock) -> None:
+def test_pipeline_source_metrics_failover_scenario(mock_source_manager: MagicMock, mock_manifest_open: Any) -> None:
     """
     Test Complex Scenario: 1 Failure (S3) -> Failover -> 1 Success (FTP).
-    Verifies that the metric source label updates correctly.
     """
     manifest_path = "dummy_manifest.csv"
     records = [
@@ -135,18 +134,11 @@ def test_pipeline_source_metrics_failover_scenario(mock_source_manager: MagicMoc
         ),
     ]
 
-    # Side effect to simulate failover state change in SourceManager
-    # The real SourceManager logic handles this, but here we mock it.
-    # We simulate that the first call fails (still S3), and the second succeeds (now FTP).
-    # We must manually update the _current_source property in the side_effect or between calls.
-
     def get_file_side_effect(path: str) -> bytes:
         if path == "fail.xml":
-            # Simulate failure on S3
             mock_source_manager._current_source = SourceType.S3
             raise Exception("S3 Error")
         elif path == "success.xml":
-            # Simulate that prior failures triggered failover
             mock_source_manager._current_source = SourceType.FTP
             return b"<article>Content</article>"
         return b""
@@ -158,7 +150,7 @@ def test_pipeline_source_metrics_failover_scenario(mock_source_manager: MagicMoc
 
     try:
         with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=records):
-            with patch("builtins.open", mock_open(read_data="header\nline")):
+            with patch("builtins.open", side_effect=mock_manifest_open(read_data="header\nline")):
                 inc = dlt.sources.incremental("last_updated")
                 list(pmc_xml_files(manifest_path, source_manager=mock_source_manager, last_updated=inc))
 
@@ -179,10 +171,9 @@ def test_pipeline_source_metrics_failover_scenario(mock_source_manager: MagicMoc
         app_logger.remove(handler_id)
 
 
-def test_pipeline_source_metrics_retraction_edge_case(mock_source_manager: MagicMock) -> None:
+def test_pipeline_source_metrics_retraction_edge_case(mock_source_manager: MagicMock, mock_manifest_open: Any) -> None:
     """
     Edge Case: Retracted article.
-    Should still result in a SUCCESS metric because we ingest it (logic is in Silver layer to flag it).
     """
     manifest_path = "dummy_manifest.csv"
     record = ManifestRecord(
@@ -200,11 +191,10 @@ def test_pipeline_source_metrics_retraction_edge_case(mock_source_manager: Magic
 
     try:
         with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[record]):
-            with patch("builtins.open", mock_open(read_data="header\nline")):
+            with patch("builtins.open", side_effect=mock_manifest_open(read_data="header\nline")):
                 inc = dlt.sources.incremental("last_updated")
                 list(pmc_xml_files(manifest_path, source_manager=mock_source_manager, last_updated=inc))
 
-        # Verify success log
         metrics = [log["extra"] for log in captured_logs if log["extra"].get("metric") == "records_ingested_total"]
         assert len(metrics) == 1
         assert metrics[0]["labels"]["status"] == "success"
@@ -213,10 +203,9 @@ def test_pipeline_source_metrics_retraction_edge_case(mock_source_manager: Magic
         app_logger.remove(handler_id)
 
 
-def test_pipeline_source_metrics_zero_byte_file(mock_source_manager: MagicMock) -> None:
+def test_pipeline_source_metrics_zero_byte_file(mock_source_manager: MagicMock, mock_manifest_open: Any) -> None:
     """
     Edge Case: Zero-byte file.
-    Should result in a SUCCESS metric at Bronze layer (ingestion successful, even if empty).
     """
     manifest_path = "dummy_manifest.csv"
     record = ManifestRecord(
@@ -234,11 +223,10 @@ def test_pipeline_source_metrics_zero_byte_file(mock_source_manager: MagicMock) 
 
     try:
         with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[record]):
-            with patch("builtins.open", mock_open(read_data="header\nline")):
+            with patch("builtins.open", side_effect=mock_manifest_open(read_data="header\nline")):
                 inc = dlt.sources.incremental("last_updated")
                 list(pmc_xml_files(manifest_path, source_manager=mock_source_manager, last_updated=inc))
 
-        # Verify success log
         metrics = [log["extra"] for log in captured_logs if log["extra"].get("metric") == "records_ingested_total"]
         assert len(metrics) == 1
         assert metrics[0]["labels"]["status"] == "success"

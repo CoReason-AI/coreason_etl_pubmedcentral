@@ -161,6 +161,11 @@ def _pmc_silver_generator(items: Iterator[dict[str, Any]]) -> Iterator[dict[str,
     """
     Generator function that iterates over items and applies transformation.
     """
+    # DLT sometimes passes a single dict instead of an iterator/list.
+    # We must normalize it to a list.
+    if isinstance(items, dict):
+        items = [items]  # type: ignore
+
     for item in items:
         result = transform_silver_record(item)
         if result:
