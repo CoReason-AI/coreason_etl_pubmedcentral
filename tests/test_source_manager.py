@@ -343,11 +343,11 @@ def test_ftp_flakey_connection_loop(source_manager: SourceManager) -> None:
 
         source_manager._ftp = m1
 
-    # Call 1: Succeeds (Improved robustness handles m2 failure via internal _ensure check)
-    # Flow:
-    # Attempt 1 (m1) -> Fail
-    # before_sleep -> reconnect (m2)
-    # Attempt 2 -> _ensure checks m2.voidcmd -> Fail -> reconnect (m3) -> fetch (m3) -> Success
+        # Call 1: Succeeds (Improved robustness handles m2 failure via internal _ensure check)
+        # Flow:
+        # Attempt 1 (m1) -> Fail
+        # before_sleep -> reconnect (m2)
+        # Attempt 2 -> _ensure checks m2.voidcmd -> Fail -> reconnect (m3) -> fetch (m3) -> Success
         data = source_manager.get_file("file")
         assert data == b"success"
 
@@ -599,3 +599,38 @@ def test_ftp_timeout_during_transfer(source_manager: SourceManager) -> None:
 
         # Verify reconnection happened
         mock_ftp_cls.assert_called()
+
+def test_ftp_retry_cleans_buffer(source_manager: SourceManager) -> None:
+    """
+    Verify that if a fetch fails after writing partial data, the buffer is reset
+    before the retry writes data. Prevents corruption (e.g. partial + full content).
+    """
+    source_manager._current_source = SourceType.FTP
+
+    with patch("ftplib.FTP") as mock_ftp_cls:
+        # Mock 1: Writes partial data then fails
+        mock_ftp_1 = MagicMock()
+        def side_effect_partial(cmd: str, callback: Any) -> None:
+            callback(b"partial_junk")
+            raise EOFError("Cut off mid-stream")
+
+        mock_ftp_1.retrbinary.side_effect = side_effect_partial
+        # Allow voidcmd to pass so it attempts the fetch
+        mock_ftp_1.voidcmd.return_value = "OK"
+
+        # Mock 2: Success
+        mock_ftp_2 = MagicMock()
+        def side_effect_success(cmd: str, callback: Any) -> None:
+            callback(b"full_content")
+
+        mock_ftp_2.retrbinary.side_effect = side_effect_success
+
+        # Set initial state
+        source_manager._ftp = mock_ftp_1
+        # Reconnection will return mock_2
+        mock_ftp_cls.return_value = mock_ftp_2
+
+        data = source_manager.get_file("file")
+
+        # Must strictly equal "full_content", NOT "partial_junkfull_content"
+        assert data == b"full_content"

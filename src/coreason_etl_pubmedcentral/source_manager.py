@@ -11,7 +11,7 @@
 import ftplib
 import io
 from enum import Enum, auto
-from typing import Any, Optional
+from typing import Optional
 
 import boto3
 import tenacity
@@ -128,11 +128,15 @@ class SourceManager:
         retry=tenacity.retry_if_exception_type(ftplib.all_errors + (EOFError, TimeoutError, OSError)),
         before_sleep=lambda rs: rs.args[0]._reconnect_ftp_before_retry(rs),
         reraise=True,
-    )
+    )  # type: ignore[misc]
     def _fetch_ftp_retryable(self, full_path: str, bio: io.BytesIO) -> None:
         """
         Fetches file from FTP with automatic retry via tenacity.
         """
+        # Ensure buffer is clean for every attempt (prevents corruption on retry after partial write)
+        bio.seek(0)
+        bio.truncate()
+
         self._ensure_ftp_connection()
         if not self._ftp:
             raise RuntimeError("FTP connection could not be established.")
