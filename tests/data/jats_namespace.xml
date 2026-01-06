@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<article xmlns="http://jats.nlm.nih.gov" article-type="research-article">
+    <front>
+        <article-meta>
+            <article-id pub-id-type="pmc">PMC12345</article-id>
+            <title-group>
+                <article-title>Namespaced Article</article-title>
+            </title-group>
+        </article-meta>
+    </front>
+    <body>
+        <p>Some text.</p>
+    </body>
+</article>
