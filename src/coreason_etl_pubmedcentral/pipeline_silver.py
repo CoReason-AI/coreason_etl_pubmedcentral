@@ -46,9 +46,15 @@ def transform_silver_record(item: dict[str, Any]) -> Optional[dict[str, Any]]:
 
     try:
         # Enforce "Stream & Clear" memory management pattern
-        # Wrap string in BytesIO for iterparse
-        # Bronze decodes to string, we encode back to bytes for lxml safety with encoding
-        f = io.BytesIO(raw_xml.encode("utf-8"))
+        # Wrap string/bytes in BytesIO for iterparse
+        # Handle both bytes (preferred from Bronze) and str (legacy/fallback)
+        if isinstance(raw_xml, bytes):
+            f = io.BytesIO(raw_xml)
+        elif isinstance(raw_xml, str):
+            f = io.BytesIO(raw_xml.encode("utf-8"))
+        else:
+            # Fallback for unexpected types
+            f = io.BytesIO(str(raw_xml).encode("utf-8"))
 
         # Using iterparse to parse the single article in the blob
         context = etree.iterparse(f, events=("end",), tag="article")

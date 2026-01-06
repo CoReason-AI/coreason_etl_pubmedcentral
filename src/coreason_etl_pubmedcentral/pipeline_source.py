@@ -42,7 +42,15 @@ def pmc_source(
 
 @dlt.resource(
     write_disposition="append",
-    columns={"ingestion_date": {"data_type": "date", "partition": True}},
+    columns={
+        "ingestion_date": {"data_type": "date", "partition": True},
+        "source_file_path": {"data_type": "text"},
+        "ingestion_ts": {"data_type": "timestamp"},
+        "ingestion_source": {"data_type": "text"},
+        "raw_xml_payload": {"data_type": "binary"},
+        "manifest_metadata": {"data_type": "json"},
+        "last_updated": {"data_type": "timestamp"},
+    },
 )  # type: ignore[misc]
 def pmc_xml_files(
     manifest_file_path: str,
@@ -87,16 +95,14 @@ def pmc_xml_files(
     logger.info(f"Starting ingestion with cutoff: {last_ingested_cutoff}")
 
     try:
-        with open(manifest_file_path, "r", encoding="utf-8") as f:
+        # Use utf-8-sig to handle potential BOM (Byte Order Mark) gracefully
+        with open(manifest_file_path, "r", encoding="utf-8-sig") as f:
             for record in parse_manifest(f, last_ingested_cutoff=last_ingested_cutoff):
                 # Bind context to the logger for better traceability
                 context_logger = logger.bind(file_path=record.file_path)
                 try:
                     # Fetch file content
                     content_bytes = source_manager.get_file(record.file_path)
-
-                    # Decode to string (assuming UTF-8)
-                    raw_xml = content_bytes.decode("utf-8")
 
                     # Metadata
                     manifest_metadata = asdict(record)
@@ -109,7 +115,7 @@ def pmc_xml_files(
                         "ingestion_ts": current_ts,
                         "ingestion_date": current_ts.date(),
                         "ingestion_source": source_manager._current_source.name,
-                        "raw_xml_payload": raw_xml,
+                        "raw_xml_payload": content_bytes,
                         "manifest_metadata": manifest_metadata,
                         "last_updated": record.last_updated,
                     }
