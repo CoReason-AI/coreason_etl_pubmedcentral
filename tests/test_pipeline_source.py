@@ -502,3 +502,53 @@ def test_pmc_xml_files_schema_definition() -> None:
     assert columns["ingestion_source"]["data_type"] == "text"
     assert columns["raw_xml_payload"]["data_type"] == "binary"
     assert columns["manifest_metadata"]["data_type"] == "json"
+
+
+def test_bronze_partitioning_compliance(mock_source_manager: MagicMock) -> None:
+    """
+    Strictly verify Bronze Layer Partitioning requirements:
+    1. 'ingestion_date' exists in schema and is a partition key.
+    2. 'ingestion_date' is correctly derived from 'ingestion_ts' (UTC).
+    """
+    # 1. Schema Verification
+    columns = pmc_xml_files.columns
+    assert "ingestion_date" in columns
+    assert columns["ingestion_date"]["data_type"] == "date"
+    assert columns["ingestion_date"]["partition"] is True
+
+    # 2. Value Verification
+    fixed_ts = datetime(2025, 1, 1, 15, 30, 0, tzinfo=timezone.utc)
+
+    # We patch the datetime class imported in pipeline_source
+    with patch("coreason_etl_pubmedcentral.pipeline_source.datetime") as mock_dt:
+        mock_dt.now.return_value = fixed_ts
+        # Passthrough for other methods used
+        mock_dt.fromisoformat.side_effect = datetime.fromisoformat
+
+        # Setup dummy execution
+        manifest_path = "dummy.csv"
+        record = ManifestRecord(
+            file_path="f.xml",
+            accession_id="ID",
+            last_updated=fixed_ts,
+            pmid=None,
+            license_type="Lic",
+            is_retracted=False,
+        )
+
+        mock_source_manager.get_file.return_value = b"<root/>"
+
+        with patch("coreason_etl_pubmedcentral.pipeline_source.parse_manifest", return_value=[record]):
+            with patch("builtins.open", mock_open()):
+                inc = dlt.sources.incremental("last_updated")
+                items = list(pmc_xml_files(manifest_path, source_manager=mock_source_manager, last_updated=inc))
+
+                assert len(items) == 1
+                item = items[0]
+
+                # Check TS
+                assert item["ingestion_ts"] == fixed_ts
+
+                # Check Date
+                assert item["ingestion_date"] == fixed_ts.date()
+                assert str(item["ingestion_date"]) == "2025-01-01"
