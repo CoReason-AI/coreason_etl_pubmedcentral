@@ -484,3 +484,21 @@ def test_pmc_xml_files_remote_manifest_empty(mock_source_manager: MagicMock) -> 
                 )
             )
             assert len(items) == 0
+
+
+def test_pmc_xml_files_schema_definition() -> None:
+    """Verify that ingestion_date is configured as a partition column in the resource schema."""
+    # Access the resource schema columns
+    # pmc_xml_files is a dlt resource, we can inspect its columns attribute
+    columns = pmc_xml_files.columns
+
+    assert "ingestion_date" in columns
+    assert columns["ingestion_date"]["data_type"] == "date"
+    assert columns["ingestion_date"]["partition"] is True
+
+    # Verify other columns types are explicit
+    assert columns["source_file_path"]["data_type"] == "text"
+    assert columns["ingestion_ts"]["data_type"] == "timestamp"
+    assert columns["ingestion_source"]["data_type"] == "text"
+    assert columns["raw_xml_payload"]["data_type"] == "binary"
+    assert columns["manifest_metadata"]["data_type"] == "json"
