@@ -54,48 +54,37 @@ def parse_manifest(lines: Iterator[str], last_ingested_cutoff: Optional[datetime
         return
 
     for row in reader:
-        # Check if row is empty/blank
-        if not row:
-            continue
+        # DictReader generally handles blank lines by skipping or yielding empty dicts.
+        # If skipinitialspace=True, it handles some whitespace.
+        # We perform robust extraction.
 
-        # Filter out rows that are entirely None values (blank lines sometimes yield this)
-        if all(v is None for v in row.values()):
-            continue
-
-        # Extract fields
+        # Extract fields and strip whitespace if present
         # Note: DictReader puts extra fields in 'restkey' and missing fields are None (or restval)
 
         file_path = row.get("File Path")
-        accession_id = row.get("Accession ID")
-        last_updated_str = row.get("Last Updated (UTC)")
-        pmid_str = row.get("PMID")
-        license_type = row.get("License")
-        retracted_str = row.get("Retracted")
+        file_path = file_path.strip() if file_path else None
 
-        # Strip whitespace (DictReader's skipinitialspace handles leading, but we want robust stripping)
-        if file_path:
-            file_path = file_path.strip()
-        if accession_id:
-            accession_id = accession_id.strip()
-        if last_updated_str:
-            last_updated_str = last_updated_str.strip()
-        if pmid_str:
-            pmid_str = pmid_str.strip()
-        if license_type:
-            license_type = license_type.strip()
-        if retracted_str:
-            retracted_str = retracted_str.strip()
+        accession_id = row.get("Accession ID")
+        accession_id = accession_id.strip() if accession_id else None
+
+        last_updated_str = row.get("Last Updated (UTC)")
+        last_updated_str = last_updated_str.strip() if last_updated_str else None
+
+        pmid_str = row.get("PMID")
+        pmid_str = pmid_str.strip() if pmid_str else None
+
+        license_type = row.get("License")
+        license_type = license_type.strip() if license_type else None
+
+        retracted_str = row.get("Retracted")
+        retracted_str = retracted_str.strip() if retracted_str else None
 
         # Validation: Mandatory fields
         if not (file_path and accession_id and last_updated_str):
             continue
 
-        # If Retracted is missing (e.g. short row), default to False?
-        # The previous logic checked `len(row) < 6`.
-        # If `Retracted` is None, it means the row was short.
+        # If Retracted is missing (e.g. short row), skip
         if retracted_str is None:
-            # If "Retracted" column is missing, previous code skipped.
-            # "if len(row) < 6: continue"
             continue
 
         # Parsing logic

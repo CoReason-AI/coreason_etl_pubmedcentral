@@ -96,6 +96,17 @@ def test_parse_manifest_short_row() -> None:
     assert records[0].accession_id == "acc2"
 
 
+def test_parse_manifest_missing_mandatory_fields() -> None:
+    data = [
+        "Header",
+        ",,2024-01-01 10:00:00,pmid,lic,no",  # Missing Path and Accession
+        "path2,acc2,2024-01-01 10:00:00,pmid,lic,no",
+    ]
+    records = list(parse_manifest(iter(data)))
+    assert len(records) == 1
+    assert records[0].accession_id == "acc2"
+
+
 def test_parse_manifest_empty() -> None:
     records = list(parse_manifest(iter([])))
     assert len(records) == 0

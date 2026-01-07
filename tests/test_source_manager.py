@@ -154,3 +154,15 @@ def test_close(
     source_manager.close()
     mock_s3.clear_instance_cache.assert_called_once()
     mock_ftp.clear_instance_cache.assert_called_once()
+
+
+def test_invalid_source_state(
+    source_manager: SourceManager,
+    mock_fsspec_filesystem: Tuple[MagicMock, MagicMock, MagicMock],
+) -> None:
+    """Verify RuntimeError is raised for unknown source state."""
+    # Manually set an invalid state
+    source_manager._current_source = None  # type: ignore
+
+    with pytest.raises(RuntimeError, match="Unknown source state"):
+        source_manager.get_file("file.xml")
