@@ -38,72 +38,68 @@ def parse_manifest(lines: Iterator[str], last_ingested_cutoff: Optional[datetime
     Yields:
         ManifestRecord objects.
     """
-    reader = csv.reader(lines)
+    # Define expected schema columns in order
+    fieldnames = ["File Path", "Accession ID", "Last Updated (UTC)", "PMID", "License", "Retracted"]
 
-    # Attempt to skip header if it exists
-    # The spec doesn't explicitly say there is a header, but typically there is.
-    # We can inspect the first row. If parsing fails, we might assume it was a header.
-    # Or strict adherence: The schema lists "Column Name" in the spec, implying a header.
-    # We'll assume the first row is a header.
+    # Use DictReader with strict fieldnames to map by position, robust to header content
+    # skipinitialspace=True handles whitespace after delimiters
+    reader = csv.DictReader(lines, fieldnames=fieldnames, skipinitialspace=True)
+
+    # Skip the header row.
+    # Note: lines is an iterator. DictReader wraps it.
+    # Calling next(reader) consumes one parsed row.
     try:
-        _ = next(reader)
+        next(reader)
     except StopIteration:
         return
 
-    # Check if first row is actually data or header.
-    # "File Path" or "oa_comm/..."
-    # If it looks like a header, proceed. If not, treat as data?
-    # Standard CSVs usually have headers. We will assume header presence.
-    # If the first column of header is not "File Path" (or similar), we might log a warning?
-    # For now, blindly skip first row.
+    for row in reader:
+        # DictReader generally handles blank lines by skipping or yielding empty dicts.
+        # If skipinitialspace=True, it handles some whitespace.
+        # We perform robust extraction.
 
-    for _, row in enumerate(reader, start=2):
-        if not row:
+        # Extract fields and strip whitespace if present
+        # Note: DictReader puts extra fields in 'restkey' and missing fields are None (or restval)
+
+        file_path = row.get("File Path")
+        file_path = file_path.strip() if file_path else None
+
+        accession_id = row.get("Accession ID")
+        accession_id = accession_id.strip() if accession_id else None
+
+        last_updated_str = row.get("Last Updated (UTC)")
+        last_updated_str = last_updated_str.strip() if last_updated_str else None
+
+        pmid_str = row.get("PMID")
+        pmid_str = pmid_str.strip() if pmid_str else None
+
+        license_type = row.get("License")
+        license_type = license_type.strip() if license_type else None
+
+        retracted_str = row.get("Retracted")
+        retracted_str = retracted_str.strip() if retracted_str else None
+
+        # Validation: Mandatory fields
+        if not (file_path and accession_id and last_updated_str):
             continue
 
-        if len(row) < 6:
-            # Log warning or skip?
-            # For strictness, we might skip.
+        # If Retracted is missing (e.g. short row), skip
+        if retracted_str is None:
             continue
 
-        # Extract fields
-        # 0: File Path
-        # 1: Accession ID
-        # 2: Last Updated (UTC)
-        # 3: PMID
-        # 4: License
-        # 5: Retracted
-        file_path = row[0].strip()
-        accession_id = row[1].strip()
-        last_updated_str = row[2].strip()
-        pmid_str = row[3].strip()
-        license_type = row[4].strip()
-        retracted_str = row[5].strip().lower()
+        # Parsing logic
+        is_retracted = retracted_str.lower() == "yes"
 
-        # Parse Retracted (Moved up for priority filtering)
-        is_retracted = retracted_str == "yes"
-
-        # Parse Timestamp
-        # Format assumed: YYYY-MM-DD HH:MM:SS (UTC)
-        # We need to handle potential format variations if any, but start strict.
         try:
-            # We assume UTC.
             last_updated = datetime.strptime(last_updated_str, "%Y-%m-%d %H:%M:%S")
             last_updated = last_updated.replace(tzinfo=timezone.utc)
-        except ValueError:
-            # Fallback or error?
-            # If date is unparseable, we cannot determine cutoff. Skip or error.
-            # We skip invalid rows to avoid crashing the whole pipeline.
+        except (ValueError, TypeError):
             continue
 
-        # Filter by High Water Mark
-        # Exception: Always yield retracted records to ensure we catch status updates
-        # even if the timestamp didn't bump (Retraction Watch safety).
         if last_ingested_cutoff and last_updated <= last_ingested_cutoff:
             if not is_retracted:
                 continue
 
-        # Parse PMID (Nullable)
         pmid = pmid_str if pmid_str else None
 
         yield ManifestRecord(
@@ -111,6 +107,6 @@ def parse_manifest(lines: Iterator[str], last_ingested_cutoff: Optional[datetime
             accession_id=accession_id,
             last_updated=last_updated,
             pmid=pmid,
-            license_type=license_type,
+            license_type=license_type if license_type else "unknown",
             is_retracted=is_retracted,
         )
