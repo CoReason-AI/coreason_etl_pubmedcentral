@@ -8,22 +8,13 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
-import ftplib
 import io
 from enum import Enum, auto
-from typing import Optional
+from typing import Any, Optional
 
-import boto3
-import tenacity
-from botocore import UNSIGNED
-from botocore.config import Config
-from botocore.exceptions import (
-    ClientError,
-    ConnectionError,
-    ConnectTimeoutError,
-    EndpointConnectionError,
-    ReadTimeoutError,
-)
+import fsspec
+from fsspec.implementations.ftp import FTPFileSystem
+from s3fs import S3FileSystem
 
 from coreason_etl_pubmedcentral.utils.logger import logger
 
@@ -35,8 +26,8 @@ class SourceType(Enum):
 
 class SourceManager:
     """
-    Manages fetching files from S3 with a failover to FTP.
-    Maintains persistent connections where applicable.
+    Manages fetching files from S3 with a failover to FTP using fsspec.
+    Maintains persistent connections where applicable via fsspec caching.
     """
 
     S3_BUCKET = "pmc-oa-opendata"
@@ -48,12 +39,13 @@ class SourceManager:
         self._current_source = SourceType.S3
         self._s3_consecutive_errors = 0
 
-        # S3 Client (Lazy init? No, lightweight enough to init here or on first use)
-        # Using unsigned config for public bucket
-        self._s3_client = boto3.client("s3", config=Config(signature_version=UNSIGNED))
+        # Initialize Filesystems
+        # S3: Anonymous access
+        self._fs_s3: S3FileSystem = fsspec.filesystem("s3", anon=True)
 
-        # FTP Client state
-        self._ftp: Optional[ftplib.FTP] = None
+        # FTP: We initialize it, but connection might happen on first use
+        # fsspec's FTPFileSystem handles connection pooling/keepalive internally to some extent
+        self._fs_ftp: FTPFileSystem = fsspec.filesystem("ftp", host=self.FTP_HOST)
 
     def get_file(self, file_path: str) -> bytes:
         """
@@ -66,39 +58,48 @@ class SourceManager:
                 # Success: reset error counter
                 self._s3_consecutive_errors = 0
                 return content
-            except (
-                ConnectionError,
-                EndpointConnectionError,
-                ConnectTimeoutError,
-                ReadTimeoutError,
-            ) as e:
-                # Only connection/timeout errors trigger failover
-                self._s3_consecutive_errors += 1
-                logger.warning(
-                    f"S3 Connection/Timeout Error ({self._s3_consecutive_errors}/{self.FAILOVER_THRESHOLD}) "
-                    f"fetching {file_path}: {e}"
-                )
+            except Exception as e:
+                # Analyze exception to decide on failover
+                # fsspec S3 errors: usually FileNotFoundError for 404, or others for connection.
+                # We need to distinguish 404 (ClientError) from connection issues.
+                # s3fs usually wraps botocore exceptions or raises standard OSErrors.
 
-                if self._s3_consecutive_errors >= self.FAILOVER_THRESHOLD:
-                    logger.info(
-                        f"FailoverEvent — S3 unreachable. Switched to FTP for batch/subsequent requests. "
-                        f"Triggered by failure on {file_path}"
+                is_connection_error = False
+                is_not_found = isinstance(e, FileNotFoundError)
+
+                # Check for underlying botocore connection errors if wrapped
+                # s3fs doesn't always wrap cleanly, so we might check message or type name
+                # But typically, if it's not FileNotFoundError and not PermissionError, it's likely connection/transient.
+                if not is_not_found:
+                    is_connection_error = True
+
+                if is_connection_error:
+                    self._s3_consecutive_errors += 1
+                    logger.warning(
+                        f"S3 Error ({self._s3_consecutive_errors}/{self.FAILOVER_THRESHOLD}) "
+                        f"fetching {file_path}: {e}"
                     )
-                    self._current_source = SourceType.FTP
-                    # Fallthrough to FTP immediately for this request
+
+                    if self._s3_consecutive_errors >= self.FAILOVER_THRESHOLD:
+                        logger.info(
+                            f"FailoverEvent — S3 unreachable. Switched to FTP for batch/subsequent requests. "
+                            f"Triggered by failure on {file_path}"
+                        )
+                        self._current_source = SourceType.FTP
+                        # Fallthrough to FTP immediately
+                    else:
+                        # Re-raise so dlt knows this file failed
+                        raise e
                 else:
-                    # Re-raise so dlt knows this file failed (retries handled by dlt or next run)
+                    # ClientError (404/403) -> FileNotFoundError / PermissionError
+                    # Reset counter as connectivity is fine
+                    if self._s3_consecutive_errors > 0:
+                        logger.info(
+                            f"S3 ClientError (404/403) encountered (connectivity restored). "
+                            f"Resetting error counter from {self._s3_consecutive_errors} to 0."
+                        )
+                        self._s3_consecutive_errors = 0
                     raise e
-            except ClientError as e:
-                # ClientError (e.g. 404, 403) implies connectivity was successful.
-                # Therefore, we reset the connection error counter.
-                if self._s3_consecutive_errors > 0:
-                    logger.info(
-                        f"S3 ClientError encountered (connectivity restored). "
-                        f"Resetting error counter from {self._s3_consecutive_errors} to 0."
-                    )
-                    self._s3_consecutive_errors = 0
-                raise e
 
         # If we are here, we are either in FTP mode OR we just switched to FTP mode.
         if self._current_source == SourceType.FTP:
@@ -109,86 +110,24 @@ class SourceManager:
 
     def _fetch_s3(self, file_path: str) -> bytes:
         """
-        Fetches file from S3.
+        Fetches file from S3 using fsspec.
         """
-        # file_path is the key.
-        response = self._s3_client.get_object(Bucket=self.S3_BUCKET, Key=file_path)
-        return response["Body"].read()  # type: ignore
-
-    def _reconnect_ftp_before_retry(self, retry_state: "tenacity.RetryCallState") -> None:
-        """Callback to reconnect FTP before retrying."""
-        # Log the exception that caused the retry
-        exc = retry_state.outcome.exception()
-        logger.warning(f"FTP error fetching file: {exc}. Attempting reconnect.")
-        self._close_ftp()
-        self._ensure_ftp_connection()
-
-    @tenacity.retry(
-        stop=tenacity.stop_after_attempt(2),
-        retry=tenacity.retry_if_exception_type(ftplib.all_errors + (EOFError, TimeoutError, OSError)),
-        before_sleep=lambda rs: rs.args[0]._reconnect_ftp_before_retry(rs),
-        reraise=True,
-    )  # type: ignore[misc]
-    def _fetch_ftp_retryable(self, full_path: str, bio: io.BytesIO) -> None:
-        """
-        Fetches file from FTP with automatic retry via tenacity.
-        """
-        # Ensure buffer is clean for every attempt (prevents corruption on retry after partial write)
-        bio.seek(0)
-        bio.truncate()
-
-        self._ensure_ftp_connection()
-        if not self._ftp:
-            raise RuntimeError("FTP connection could not be established.")
-        self._ftp.retrbinary(f"RETR {full_path}", bio.write)
+        full_path = f"s3://{self.S3_BUCKET}/{file_path}"
+        # cat_file returns bytes
+        return self._fs_s3.cat(full_path) # type: ignore
 
     def _fetch_ftp(self, file_path: str) -> bytes:
         """
-        Fetches file from FTP, handling connection persistence and reconnection.
+        Fetches file from FTP using fsspec.
         """
         # Full path on FTP: /pub/pmc/ + file_path
-        # file_path e.g. "oa_comm/xml/PMC12345.xml"
-        # full path: "/pub/pmc/oa_comm/xml/PMC12345.xml"
         full_path = f"{self.FTP_BASE_PATH.rstrip('/')}/{file_path.lstrip('/')}"
 
-        bio = io.BytesIO()
-        self._fetch_ftp_retryable(full_path, bio)
-        return bio.getvalue()
-
-    def _ensure_ftp_connection(self) -> None:
-        """
-        Ensures self._ftp is connected.
-        """
-        if self._ftp:
-            # Check if still connected?
-            # sending a NOOP is a common way to check.
-            try:
-                self._ftp.voidcmd("NOOP")
-                return
-            except ftplib.all_errors + (EOFError,):
-                logger.debug("FTP connection lost. Reconnecting...")
-                self._close_ftp()
-
-        # Connect
-        try:
-            self._ftp = ftplib.FTP(self.FTP_HOST)
-            self._ftp.login()  # Anonymous login
-        except Exception as e:
-            logger.error(f"Failed to connect to FTP {self.FTP_HOST}: {e}")
-            self._ftp = None
-            raise e
-
-    def _close_ftp(self) -> None:
-        if self._ftp:
-            try:
-                self._ftp.quit()
-            except ftplib.all_errors + (EOFError,):
-                try:
-                    self._ftp.close()
-                except Exception:
-                    pass
-            self._ftp = None
+        # fsspec FTP cat
+        return self._fs_ftp.cat(full_path) # type: ignore
 
     def close(self) -> None:
         """Cleanup resources."""
-        self._close_ftp()
+        # fsspec filesystems usually manage their own sessions, but we can clear cache
+        self._fs_s3.clear_instance_cache()
+        self._fs_ftp.clear_instance_cache()
