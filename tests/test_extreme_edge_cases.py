@@ -8,11 +8,9 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
-import pytest
-from lxml import etree
 
-from coreason_etl_pubmedcentral.pipeline_silver import transform_silver_record
 from coreason_etl_pubmedcentral.pipeline_gold import transform_gold_record
+from coreason_etl_pubmedcentral.pipeline_silver import transform_silver_record
 
 
 def test_extreme_duplicate_pmcids() -> None:
@@ -138,7 +136,7 @@ def test_extreme_gold_author_deduplication() -> None:
         "funding": [],
         "keywords": [],
         "manifest_metadata": {"license_type": "CC0"},
-        "ingestion_metadata": {"source_file_path": "oa_comm/xml/1.xml"}
+        "ingestion_metadata": {"source_file_path": "oa_comm/xml/1.xml"},
     }
 
     gold = transform_gold_record(silver_record)
@@ -163,10 +161,10 @@ def test_extreme_gold_funding_empty_agencies() -> None:
             {"agency": "NIH", "grant_id": None},
             {"agency": None, "grant_id": "G123"},
             {"agency": "NSF", "grant_id": "G456"},
-            {"agency": "NIH", "grant_id": "G789"}, # Duplicate Agency
+            {"agency": "NIH", "grant_id": "G789"},  # Duplicate Agency
         ],
         "manifest_metadata": {"license_type": "CC0"},
-        "ingestion_metadata": {"source_file_path": "oa_comm/xml/1.xml"}
+        "ingestion_metadata": {"source_file_path": "oa_comm/xml/1.xml"},
     }
 
     gold = transform_gold_record(silver_record)
@@ -189,7 +187,7 @@ def test_extreme_gold_commercial_logic_ambiguous() -> None:
         "pmcid": "1",
         "authors": [],
         "funding": [],
-        "ingestion_metadata": {"source_file_path": "xml/PMC1.xml"}, # Ambiguous
+        "ingestion_metadata": {"source_file_path": "xml/PMC1.xml"},  # Ambiguous
         "manifest_metadata": {"license_type": "CC0"},
     }
 
