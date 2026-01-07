@@ -75,8 +75,7 @@ class SourceManager:
                 if is_connection_error:
                     self._s3_consecutive_errors += 1
                     logger.warning(
-                        f"S3 Error ({self._s3_consecutive_errors}/{self.FAILOVER_THRESHOLD}) "
-                        f"fetching {file_path}: {e}"
+                        f"S3 Error ({self._s3_consecutive_errors}/{self.FAILOVER_THRESHOLD}) fetching {file_path}: {e}"
                     )
 
                     if self._s3_consecutive_errors >= self.FAILOVER_THRESHOLD:

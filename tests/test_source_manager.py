@@ -16,7 +16,7 @@ import pytest
 from coreason_etl_pubmedcentral.source_manager import SourceManager, SourceType
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def mock_fsspec_filesystem() -> Generator[Tuple[MagicMock, MagicMock, MagicMock], None, None]:
     with patch("fsspec.filesystem") as mock_fs_factory:
         mock_s3 = MagicMock()
@@ -33,7 +33,7 @@ def mock_fsspec_filesystem() -> Generator[Tuple[MagicMock, MagicMock, MagicMock]
         yield mock_fs_factory, mock_s3, mock_ftp
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def source_manager(
     mock_fsspec_filesystem: Tuple[MagicMock, MagicMock, MagicMock],
 ) -> SourceManager:
