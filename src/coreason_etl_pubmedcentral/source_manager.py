@@ -8,9 +8,7 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
-import io
 from enum import Enum, auto
-from typing import Any, Optional
 
 import fsspec
 from fsspec.implementations.ftp import FTPFileSystem
@@ -69,7 +67,8 @@ class SourceManager:
 
                 # Check for underlying botocore connection errors if wrapped
                 # s3fs doesn't always wrap cleanly, so we might check message or type name
-                # But typically, if it's not FileNotFoundError and not PermissionError, it's likely connection/transient.
+                # But typically, if it's not FileNotFoundError and not PermissionError,
+                # it's likely connection/transient.
                 if not is_not_found:
                     is_connection_error = True
 
@@ -114,7 +113,7 @@ class SourceManager:
         """
         full_path = f"s3://{self.S3_BUCKET}/{file_path}"
         # cat_file returns bytes
-        return self._fs_s3.cat(full_path) # type: ignore
+        return self._fs_s3.cat(full_path)  # type: ignore
 
     def _fetch_ftp(self, file_path: str) -> bytes:
         """
@@ -124,7 +123,7 @@ class SourceManager:
         full_path = f"{self.FTP_BASE_PATH.rstrip('/')}/{file_path.lstrip('/')}"
 
         # fsspec FTP cat
-        return self._fs_ftp.cat(full_path) # type: ignore
+        return self._fs_ftp.cat(full_path)  # type: ignore
 
     def close(self) -> None:
         """Cleanup resources."""

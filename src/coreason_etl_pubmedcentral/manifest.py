@@ -39,14 +39,7 @@ def parse_manifest(lines: Iterator[str], last_ingested_cutoff: Optional[datetime
         ManifestRecord objects.
     """
     # Define expected schema columns in order
-    fieldnames = [
-        "File Path",
-        "Accession ID",
-        "Last Updated (UTC)",
-        "PMID",
-        "License",
-        "Retracted"
-    ]
+    fieldnames = ["File Path", "Accession ID", "Last Updated (UTC)", "PMID", "License", "Retracted"]
 
     # Use DictReader with strict fieldnames to map by position, robust to header content
     # skipinitialspace=True handles whitespace after delimiters
@@ -80,12 +73,18 @@ def parse_manifest(lines: Iterator[str], last_ingested_cutoff: Optional[datetime
         retracted_str = row.get("Retracted")
 
         # Strip whitespace (DictReader's skipinitialspace handles leading, but we want robust stripping)
-        if file_path: file_path = file_path.strip()
-        if accession_id: accession_id = accession_id.strip()
-        if last_updated_str: last_updated_str = last_updated_str.strip()
-        if pmid_str: pmid_str = pmid_str.strip()
-        if license_type: license_type = license_type.strip()
-        if retracted_str: retracted_str = retracted_str.strip()
+        if file_path:
+            file_path = file_path.strip()
+        if accession_id:
+            accession_id = accession_id.strip()
+        if last_updated_str:
+            last_updated_str = last_updated_str.strip()
+        if pmid_str:
+            pmid_str = pmid_str.strip()
+        if license_type:
+            license_type = license_type.strip()
+        if retracted_str:
+            retracted_str = retracted_str.strip()
 
         # Validation: Mandatory fields
         if not (file_path and accession_id and last_updated_str):
@@ -95,9 +94,9 @@ def parse_manifest(lines: Iterator[str], last_ingested_cutoff: Optional[datetime
         # The previous logic checked `len(row) < 6`.
         # If `Retracted` is None, it means the row was short.
         if retracted_str is None:
-             # If "Retracted" column is missing, previous code skipped.
-             # "if len(row) < 6: continue"
-             continue
+            # If "Retracted" column is missing, previous code skipped.
+            # "if len(row) < 6: continue"
+            continue
 
         # Parsing logic
         is_retracted = retracted_str.lower() == "yes"
