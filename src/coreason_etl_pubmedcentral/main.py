@@ -9,6 +9,7 @@
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
 import argparse
+import sys
 from typing import Optional
 
 import dlt
@@ -80,7 +81,10 @@ def run_pipeline(
     return info
 
 
-if __name__ == "__main__":
+def cli() -> None:
+    """
+    CLI entry point for the PMC ETL Pipeline.
+    """
     parser = argparse.ArgumentParser(description="Run the PMC ETL Pipeline.")
     parser.add_argument("manifest_path", help="Path to the local CSV manifest file.")
     parser.add_argument("--destination", default="duckdb", help="DLT destination (default: duckdb).")
@@ -98,4 +102,8 @@ if __name__ == "__main__":
         )
     except Exception:
         logger.exception("Pipeline execution failed.")
-        exit(1)
+        sys.exit(1)
+
+
+if __name__ == "__main__":  # pragma: no cover
+    cli()
