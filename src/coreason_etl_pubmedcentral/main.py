@@ -8,6 +8,7 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
+import argparse
 from typing import Optional
 
 import dlt
@@ -77,3 +78,24 @@ def run_pipeline(
 
     logger.info(f"Pipeline finished. Load Info: {info}")
     return info
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run the PMC ETL Pipeline.")
+    parser.add_argument("manifest_path", help="Path to the local CSV manifest file.")
+    parser.add_argument("--destination", default="duckdb", help="DLT destination (default: duckdb).")
+    parser.add_argument("--dataset-name", default="pmc_data", help="Target dataset name (default: pmc_data).")
+    parser.add_argument("--remote-manifest-path", help="Optional S3/FTP path to download manifest from.")
+
+    args = parser.parse_args()
+
+    try:
+        run_pipeline(
+            manifest_path=args.manifest_path,
+            destination=args.destination,
+            dataset_name=args.dataset_name,
+            remote_manifest_path=args.remote_manifest_path,
+        )
+    except Exception:
+        logger.exception("Pipeline execution failed.")
+        exit(1)
