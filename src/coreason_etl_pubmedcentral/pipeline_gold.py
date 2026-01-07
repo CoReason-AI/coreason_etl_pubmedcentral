@@ -122,6 +122,11 @@ def _pmc_gold_generator(items: Iterator[dict[str, Any]]) -> Iterator[dict[str, A
     """
     Generator that transforms Silver records to Gold.
     """
+    # DLT sometimes passes a single dict instead of an iterator/list.
+    # We must normalize it to a list.
+    if isinstance(items, dict):
+        items = [items]  # type: ignore
+
     for item in items:
         try:
             res = transform_gold_record(item)
