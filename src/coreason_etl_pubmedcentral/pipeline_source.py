@@ -123,6 +123,7 @@ def pmc_source(
 ) -> Any:
     """
     DLT Source for PubMed Central Open Access subset.
+    Orchestrates the ingestion of XML files based on the manifest.
     """
     return pmc_xml_files(manifest_file_path, remote_manifest_path, source_manager)
 
