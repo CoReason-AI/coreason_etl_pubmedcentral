@@ -144,5 +144,6 @@ def pmc_gold(items: Iterator[dict[str, Any]]) -> Iterator[dict[str, Any]]:  # pr
     """
     Gold Layer Transformer.
     Transforms structured Silver records into a "Wide Table" optimized for analytics.
+    Aggregates metadata for search and filtering.
     """
     return _pmc_gold_generator(items)

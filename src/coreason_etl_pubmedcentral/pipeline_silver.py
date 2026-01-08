@@ -179,5 +179,6 @@ def pmc_silver(items: Iterator[dict[str, Any]]) -> Iterator[dict[str, Any]]:  # 
     Parses raw XML from Bronze layer into structured Silver records.
     Handles JATS schema drift, identity extraction, temporal normalization,
     entity resolution, funding normalization, and content extraction.
+    Ensures that all text fields are properly extracted and cleaned.
     """
     return _pmc_silver_generator(items)
