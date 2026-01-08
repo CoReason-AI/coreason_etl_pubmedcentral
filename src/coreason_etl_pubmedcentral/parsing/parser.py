@@ -15,6 +15,10 @@ from lxml import etree
 
 
 class ArticleType(str, Enum):
+    """
+    Enum representing the type of article.
+    """
+
     RESEARCH = "RESEARCH"
     REVIEW = "REVIEW"
     CASE_REPORT = "CASE_REPORT"

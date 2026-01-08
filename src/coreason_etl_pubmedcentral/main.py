@@ -84,6 +84,7 @@ def run_pipeline(
 def cli() -> None:
     """
     CLI entry point for the PMC ETL Pipeline.
+    Invoked by the `pmc-etl` command installed via Poetry.
     """
     parser = argparse.ArgumentParser(description="Run the PMC ETL Pipeline.")
     parser.add_argument("manifest_path", help="Path to the local CSV manifest file.")

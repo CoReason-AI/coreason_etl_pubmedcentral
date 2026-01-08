@@ -61,7 +61,10 @@ def test_cli_defaults(mock_run_pipeline: MagicMock) -> None:
 
 
 def test_cli_execution_failure(mock_run_pipeline: MagicMock) -> None:
-    """Verify CLI handles exceptions and exits with 1."""
+    """
+    Verify CLI handles exceptions and exits with 1.
+    Ensures robust error handling for user-facing commands.
+    """
     mock_run_pipeline.side_effect = RuntimeError("Crash")
     test_args = ["prog", "manifest.csv"]
 

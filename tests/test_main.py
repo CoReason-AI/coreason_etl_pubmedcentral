@@ -61,6 +61,10 @@ def mock_dependencies() -> Generator[dict[str, Any], None, None]:
 
 
 def test_run_pipeline_success(mock_dependencies: dict[str, Any]) -> None:
+    """
+    Verify successful end-to-end orchestration of the pipeline.
+    Checks resource wiring and execution parameters.
+    """
     deps = mock_dependencies
     manifest_path = "test_manifest.csv"
 
