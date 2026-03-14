@@ -8,11 +8,8 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
-import importlib
-import tempfile
 from pathlib import Path
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 import coreason_etl_pubmedcentral.utils.logger as logger_module
 from coreason_etl_pubmedcentral.utils.logger import logger
@@ -23,8 +20,6 @@ def test_logger_initialization() -> None:
     # Since the logger is initialized on import, we check side effects
     # Ensure logs directory creation is handled
     log_path = Path("logs")
-    if not log_path.exists():
-        log_path.mkdir(parents=True, exist_ok=True)
     assert log_path.exists()
     assert log_path.is_dir()
 
@@ -34,29 +29,19 @@ def test_logger_exports() -> None:
     assert logger is not None
 
 
-def test_logger_directory_creation(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_logger_directory_creation() -> None:
     """Test the mkdir code path when the logs directory does not exist."""
+    with (
+        patch("coreason_etl_pubmedcentral.utils.logger.logger.add"),
+        patch("coreason_etl_pubmedcentral.utils.logger.logger.remove"),
+        patch("coreason_etl_pubmedcentral.utils.logger.Path") as mock_path_cls,
+    ):
+        mock_path_instance = MagicMock()
+        mock_path_instance.exists.return_value = False
+        mock_path_cls.return_value = mock_path_instance
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_path = Path(temp_dir)
+        # Call the setup function directly rather than reloading the module
+        logger_module.setup_logger()
 
-        # In logger.py it does:
-        # log_path = Path("logs")
-        # if not log_path.exists(): log_path.mkdir(...)
-        # We can simulate this by chdir to our temp dir!
-
-        # Monkeypatch the current working directory to our temp directory
-        monkeypatch.chdir(temp_path)
-
-        # Directory shouldn't exist initially
-        assert not Path("logs").exists()
-
-        # Remove it from sys.modules so it's loaded afresh
-        # Actually reload should suffice to rerun module-level code
-        importlib.reload(logger_module)
-
-        # After reload, it should exist
-        assert Path("logs").exists()
-
-        # Remove loguru handlers so the log file is released, allowing Windows to delete the temp dir
-        logger_module.logger.remove()
+        # Verify mkdir was called
+        mock_path_instance.mkdir.assert_called_once_with(parents=True, exist_ok=True)
