@@ -57,3 +57,6 @@ def test_logger_directory_creation(monkeypatch: pytest.MonkeyPatch) -> None:
 
         # After reload, it should exist
         assert Path("logs").exists()
+
+        # Remove loguru handlers so the log file is released, allowing Windows to delete the temp dir
+        logger_module.logger.remove()
