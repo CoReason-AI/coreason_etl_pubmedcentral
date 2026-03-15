@@ -1,0 +1,32 @@
+# Copyright (c) 2026 CoReason, Inc.
+#
+# This software is proprietary and dual-licensed.
+# Licensed under the Prosperity Public License 3.0 (the "License").
+# A copy of the license is available at https://prosperitylicense.com/versions/3.0.0
+# For details, see the LICENSE file.
+# Commercial use beyond a 30-day trial requires a separate license.
+#
+# Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
+
+import uuid
+
+import polars as pl
+
+# Fixed namespace for CoReason PMC articles
+PMC_NAMESPACE = uuid.UUID("12345678-1234-5678-1234-567812345678")
+
+
+def generate_surrogate_keys(pmcids: pl.Series) -> pl.Series:
+    """
+    Generate deterministic surrogate keys (coreason_id) using UUIDv5 by hashing the canonical pmcid
+    via vectorized Polars operations.
+
+    Args:
+        pmcids (pl.Series): A Polars Series containing canonical PMCIDs.
+
+    Returns:
+        pl.Series: A Polars Series containing the generated deterministic UUIDv5 strings.
+    """
+    return pmcids.map_elements(
+        lambda x: str(uuid.uuid5(PMC_NAMESPACE, str(x))) if x is not None else None, return_dtype=pl.String
+    )
