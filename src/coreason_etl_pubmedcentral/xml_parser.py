@@ -12,7 +12,7 @@ import enum
 from typing import Any
 
 from lxml import etree
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ArticleTypeEnum(enum.StrEnum):
@@ -61,6 +61,29 @@ class ArticleEntityState(BaseModel):
     contributors: list[ContributorEntityState] = Field(
         default_factory=list, description="List of resolved contributors"
     )
+
+
+class FundingEntityState(BaseModel):
+    """
+    Epistemic snapshot of a single funding entity.
+    """
+
+    agency: str = Field(description="Normalized agency name")
+    grant_id: str = Field(description="Normalized grant ID")
+
+
+class ArticleFundingState(BaseModel):
+    """
+    Epistemic snapshot containing the resolved funding entities.
+    """
+
+    funding: list[FundingEntityState] = Field(default_factory=list, description="List of funding entities")
+
+    @field_validator("funding")
+    @classmethod
+    def sort_funding(cls, v: list[FundingEntityState]) -> list[FundingEntityState]:
+        """AGENT INSTRUCTION: Ensure deterministic sorting of funding."""
+        return sorted(v, key=lambda x: (x.agency, x.grant_id))
 
 
 class ArticleTemporalState(BaseModel):
@@ -324,3 +347,57 @@ def extract_entity_state(root: etree._Element) -> ArticleEntityState:
             contributors.append(ContributorEntityState(name=name, affs=affs))
 
     return ArticleEntityState(contributors=contributors)
+
+
+def extract_funding_state(root: etree._Element) -> ArticleFundingState:
+    """
+    AGENT INSTRUCTION: Parse the JATS XML tree to resolve funding entities.
+    Handles both modern JATS (<funding-group>) and legacy JATS (<contract-num>, <contract-sponsor>).
+
+    Returns:
+        ArticleFundingState: The populated epistemic state.
+    """
+    funding: list[FundingEntityState] = []
+
+    # Strategy 1: Modern JATS (funding-group)
+    award_nodes: Any = root.xpath("//funding-group//award-group")
+    if award_nodes and hasattr(award_nodes, "__iter__"):
+        for award in award_nodes:
+            agency_nodes = award.xpath(".//funding-source")
+            grant_nodes = award.xpath(".//award-id")
+
+            # In modern JATS, an award-group can have multiple funding-sources or award-ids,
+            # but usually it's one of each or related. We'll join them or take the first.
+            # To be robust, we combine text of all matching nodes.
+            agency_text = ""
+            if agency_nodes:
+                agency_text = " ".join("".join(str(t) for t in n.itertext()).strip() for n in agency_nodes).strip()
+
+            grant_text = ""
+            if grant_nodes:
+                grant_text = " ".join("".join(str(t) for t in n.itertext()).strip() for n in grant_nodes).strip()
+
+            if agency_text or grant_text:
+                funding.append(FundingEntityState(agency=agency_text, grant_id=grant_text))
+
+        return ArticleFundingState(funding=funding)
+
+    # Strategy 2: Legacy JATS (article-meta)
+    # AGENT INSTRUCTION: Legacy funding extraction generates independent ArticleFunding objects
+    # for contract-num and contract-sponsor elements when they appear as siblings without grouping,
+    # prioritizing data preservation over unsafe heuristic merging.
+    contract_nums: Any = root.xpath("//article-meta//contract-num")
+    if contract_nums and hasattr(contract_nums, "__iter__"):
+        for num in contract_nums:
+            num_text = "".join(str(t) for t in num.itertext()).strip()
+            if num_text:
+                funding.append(FundingEntityState(agency="", grant_id=num_text))
+
+    contract_sponsors: Any = root.xpath("//article-meta//contract-sponsor")
+    if contract_sponsors and hasattr(contract_sponsors, "__iter__"):
+        for sponsor in contract_sponsors:
+            sponsor_text = "".join(str(t) for t in sponsor.itertext()).strip()
+            if sponsor_text:
+                funding.append(FundingEntityState(agency=sponsor_text, grant_id=""))
+
+    return ArticleFundingState(funding=funding)
