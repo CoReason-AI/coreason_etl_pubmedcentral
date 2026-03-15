@@ -39,6 +39,30 @@ class ArticleIdentityState(BaseModel):
     )
 
 
+class ContributorEntityState(BaseModel):
+    """
+    Epistemic snapshot of a single contributor and their resolved affiliations.
+    """
+
+    name: str = Field(description="Resolved display name, e.g., 'Doe J'")
+    affs: list[str] = Field(default_factory=list, description="List of resolved affiliation strings")
+
+    def __init__(self, **data: Any) -> None:
+        """AGENT INSTRUCTION: Ensure deterministic sorting of affiliations."""
+        super().__init__(**data)
+        self.affs = sorted(self.affs)
+
+
+class ArticleEntityState(BaseModel):
+    """
+    Epistemic snapshot containing the resolved contributors and their affiliations.
+    """
+
+    contributors: list[ContributorEntityState] = Field(
+        default_factory=list, description="List of resolved contributors"
+    )
+
+
 class ArticleTemporalState(BaseModel):
     """
     Epistemic snapshot containing the temporal facts of a parsed PubMed Central document.
@@ -203,3 +227,100 @@ def extract_temporal_state(root: etree._Element) -> ArticleTemporalState:
         date_accepted = _parse_date_element(acc_dates[0])
 
     return ArticleTemporalState(date_published=date_published, date_received=date_received, date_accepted=date_accepted)
+
+
+def extract_entity_state(root: etree._Element) -> ArticleEntityState:
+    """
+    AGENT INSTRUCTION: Parse the JATS XML tree to resolve entities (authors and affiliations)
+    using a mapping strategy for internal references.
+
+    Returns:
+        ArticleEntityState: The populated epistemic state.
+    """
+    # Step 1: Map Affiliations
+    aff_nodes: Any = root.xpath("//aff")
+    aff_map: dict[str, str] = {}
+    if aff_nodes and hasattr(aff_nodes, "__iter__"):
+        for aff in aff_nodes:
+            # Get ID attribute
+            id_attrs = aff.xpath("./@id")
+            if not id_attrs:
+                continue
+            aff_id = str(id_attrs[0]).strip()
+
+            # We need to extract the text of the affiliation, excluding the label.
+            # E.g., <aff id="a1"><label>1</label>University of X</aff>
+
+            # Simple approach: get all text nodes and join them, skipping <label> text
+            text_parts: list[str] = []
+            for child in aff.iter():
+                # Avoid label tags, only extract text
+                if (not isinstance(child.tag, str) or child.tag.lower() != "label") and child.text:
+                    text_parts.append(str(child.text).strip())
+                if child.tail:
+                    text_parts.append(str(child.tail).strip())
+
+            # For the root `aff` element, ensure we don't duplicate tail text
+            # if it was iterated over differently, but `iter()` is a depth-first
+            # traversal yielding elements. Actually, `aff.text` may not be covered
+            # if we just loop `child in aff.iter()` because `aff` is the first element yielded.
+            # But the logic above correctly skips `<label>` text.
+
+            # We should be careful about extracting text properly.
+            # Let's use a simpler method: just remove <label> nodes, then get text.
+            # But we shouldn't modify the original tree.
+            # Instead, let's use XPath to get text nodes excluding those under <label>
+            valid_text_nodes = aff.xpath(".//text()[not(ancestor-or-self::label)]")
+            if valid_text_nodes:
+                text_parts = [str(t).strip() for t in valid_text_nodes if str(t).strip()]
+                aff_text = " ".join(text_parts).strip()
+            else:
+                aff_text = ""
+
+            if aff_text:
+                aff_map[aff_id] = aff_text
+
+    # Step 2: Resolve Contributors
+    contrib_nodes: Any = root.xpath("//contrib-group/contrib")
+    contributors: list[ContributorEntityState] = []
+
+    if contrib_nodes and hasattr(contrib_nodes, "__iter__"):
+        for contrib in contrib_nodes:
+            # Extract name
+            surname_nodes = contrib.xpath(".//surname/text()")
+            given_nodes = contrib.xpath(".//given-names/text()")
+
+            surname = str(surname_nodes[0]).strip() if surname_nodes else ""
+            given = str(given_nodes[0]).strip() if given_nodes else ""
+
+            if surname and given:
+                # E.g. Doe J -> split given names and take first letters
+                given_initials = "".join([n[0] for n in given.split() if n])
+                name = f"{surname} {given_initials}".strip()
+            elif surname:
+                name = surname
+            elif given:
+                name = given
+            else:
+                # Try getting the raw text if no structured name elements exist
+                # Or just skip if name cannot be found
+                raw_name = "".join(str(t) for t in contrib.itertext()).strip()
+                name = raw_name or "Unknown"
+
+            # Extract affiliations
+            affs: list[str] = []
+            xref_nodes = contrib.xpath(".//xref[@ref-type='aff']/@rid")
+            if xref_nodes and hasattr(xref_nodes, "__iter__"):
+                for rid in xref_nodes:
+                    rid_str = str(rid).strip()
+                    # Some JATS XMLs put multiple space-separated IDs in a single rid attribute
+                    affs.extend(
+                        [aff_map[individual_rid] for individual_rid in rid_str.split() if individual_rid in aff_map]
+                    )
+
+            # Deduplicate affiliations
+            affs = list(set(affs))
+
+            contributors.append(ContributorEntityState(name=name, affs=affs))
+
+    return ArticleEntityState(contributors=contributors)
