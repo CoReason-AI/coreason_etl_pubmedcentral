@@ -45,10 +45,12 @@ wheels = [
 name = "coreason-etl-pubmedcentral"
 source = { editable = "." }
 dependencies = [
+    { name = "fsspec" },
     { name = "loguru" },
     { name = "lxml" },
     { name = "polars" },
     { name = "pydantic" },
+    { name = "tenacity" },
 ]
 
 [package.dev-dependencies]
@@ -74,10 +76,12 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "fsspec", specifier = ">=2026.2.0" },
     { name = "loguru", specifier = ">=0.7.2" },
     { name = "lxml", specifier = ">=6.0.2" },
     { name = "polars", specifier = ">=1.39.0" },
     { name = "pydantic", specifier = ">=2.12.5" },
+    { name = "tenacity", specifier = ">=9.1.4" },
 ]
 
 [package.metadata.requires-dev]
@@ -208,6 +212,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/b8/00651a0f559862f3bb7d6f7477b192afe3f583cc5e26403b44e59a55ab34/filelock-3.25.2.tar.gz", hash = "sha256:b64ece2b38f4ca29dd3e810287aa8c48182bbecd1ae6e9ae126c9b35f1382694", size = 40480, upload-time = "2026-03-11T20:45:38.487Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a4/a5/842ae8f0c08b61d6484b52f99a03510a3a72d23141942d216ebe81fefbce/filelock-3.25.2-py3-none-any.whl", hash = "sha256:ca8afb0da15f229774c9ad1b455ed96e85a81373065fb10446672f64444ddf70", size = 26759, upload-time = "2026-03-11T20:45:37.437Z" },
+]
+
+[[package]]
+name = "fsspec"
+version = "2026.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/51/7c/f60c259dcbf4f0c47cc4ddb8f7720d2dcdc8888c8e5ad84c73ea4531cc5b/fsspec-2026.2.0.tar.gz", hash = "sha256:6544e34b16869f5aacd5b90bdf1a71acb37792ea3ddf6125ee69a22a53fb8bff", size = 313441, upload-time = "2026-02-05T21:50:53.743Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e6/ab/fb21f4c939bb440104cc2b396d3be1d9b7a9fd3c6c2a53d98c45b3d7c954/fsspec-2026.2.0-py3-none-any.whl", hash = "sha256:98de475b5cb3bd66bedd5c4679e87b4fdfe1a3bf4d707b151b3c07e58c9a2437", size = 202505, upload-time = "2026-02-05T21:50:51.819Z" },
 ]
 
 [[package]]
@@ -912,6 +925,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/2e/b0/24bca682d6a6337854be37f242d116cceeda9942571d5804c44bc1bdd427/syrupy-5.1.0.tar.gz", hash = "sha256:df543c7aa50d3cf1246e83d58fe490afe5f7dab7b41e74ecc0d8d23ae19bd4b8", size = 50495, upload-time = "2026-01-25T14:53:06.2Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/de/70/cf880c3b95a6034ef673e74b369941b42315c01f1554a5637a4f8b911009/syrupy-5.1.0-py3-none-any.whl", hash = "sha256:95162d2b05e61ed3e13f117b88dfab7c58bd6f90e66ebbf918e8a77114ad51c5", size = 51658, upload-time = "2026-01-25T14:53:05.105Z" },
+]
+
+[[package]]
+name = "tenacity"
+version = "9.1.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/c6/ee486fd809e357697ee8a44d3d69222b344920433d3b6666ccd9b374630c/tenacity-9.1.4.tar.gz", hash = "sha256:adb31d4c263f2bd041081ab33b498309a57c77f9acf2db65aadf0898179cf93a", size = 49413, upload-time = "2026-02-07T10:45:33.841Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl", hash = "sha256:6095a360c919085f28c6527de529e76a06ad89b23659fa881ae0649b867a9d55", size = 28926, upload-time = "2026-02-07T10:45:32.24Z" },
 ]
 
 [[package]]
