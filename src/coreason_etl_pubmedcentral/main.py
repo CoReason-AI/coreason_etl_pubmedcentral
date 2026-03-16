@@ -8,9 +8,28 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
+import argparse
+
 from coreason_etl_pubmedcentral.utils.logger import logger
 
 
-def hello_world() -> str:
-    logger.info("Hello World!")
-    return "Hello World!"
+def run_pipeline(manifest_path: str) -> None:
+    """
+    AGENT INSTRUCTION: Stub for the actual pipeline execution.
+    """
+    logger.info(f"Running pipeline with manifest: {manifest_path}")
+
+
+def cli() -> None:
+    """
+    AGENT INSTRUCTION: Entry point for the CLI.
+    """
+    parser = argparse.ArgumentParser(description="ETL process for extracting medical literature from PubMed Central")
+    parser.add_argument("manifest_path", type=str, help="Path to the manifest file")
+    args = parser.parse_args()
+
+    run_pipeline(args.manifest_path)
+
+
+if __name__ == "__main__":
+    cli()  # pragma: no cover

@@ -8,8 +8,30 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
-from coreason_etl_pubmedcentral.main import hello_world
+import sys
+from unittest.mock import patch
+
+import pytest
+
+from coreason_etl_pubmedcentral.main import cli, run_pipeline
 
 
-def test_hello_world() -> None:
-    assert hello_world() == "Hello World!"
+def test_run_pipeline() -> None:
+    """Test the run_pipeline stub doesn't crash."""
+    run_pipeline("dummy_path.csv")
+
+
+def test_cli_with_argument() -> None:
+    """Test the CLI with a valid positional argument."""
+    with (
+        patch.object(sys, "argv", ["pmc-etl", "my_manifest.csv"]),
+        patch("coreason_etl_pubmedcentral.main.run_pipeline") as mock_run,
+    ):
+        cli()
+        mock_run.assert_called_once_with("my_manifest.csv")
+
+
+def test_cli_without_argument() -> None:
+    """Test the CLI without any arguments raises SystemExit."""
+    with patch.object(sys, "argv", ["pmc-etl"]), pytest.raises(SystemExit):
+        cli()
