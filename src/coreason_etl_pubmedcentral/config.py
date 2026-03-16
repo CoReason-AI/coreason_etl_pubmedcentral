@@ -9,12 +9,13 @@
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
 import dlt
-from dlt.common.configuration import configspec
+from dlt.common.configuration import configspec, with_config
 from dlt.common.configuration.specs import BaseConfiguration
 
 
 @configspec
 class PubMedCentralConfiguration(BaseConfiguration):
+    __section__ = "pubmed_central"
     """
     AGENT INSTRUCTION: Strict configuration class defining the core execution
     parameters for the PubMed Central ETL pipeline.
@@ -27,8 +28,9 @@ class PubMedCentralConfiguration(BaseConfiguration):
     manifest_noncommercial: str = "oa_noncomm/oa_noncomm.filelist.csv"
 
 
-def get_pipeline_config() -> PubMedCentralConfiguration:
+@with_config(spec=PubMedCentralConfiguration, sections=("pubmed_central",))
+def get_pipeline_config(config: PubMedCentralConfiguration = dlt.config.value) -> PubMedCentralConfiguration:
     """
     Retrieves the pipeline configuration using dlt's injection mechanism.
     """
-    return dlt.config.value  # type: ignore[no-any-return]
+    return config

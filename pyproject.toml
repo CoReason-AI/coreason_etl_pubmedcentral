@@ -12,8 +12,7 @@ authors = [
     { name = "Akshaya M", email = "akshaya.movvar@coreason.ai" },
 ]
 dependencies = [
-    "dlt[duckdb]>=1.20.0",
-    "duckdb>=1.0.0",
+    "dlt>=1.20.0",
     "fsspec>=2026.2.0",
     "loguru>=0.7.2",
     "lxml>=6.0.2",
@@ -66,9 +65,6 @@ Documentation = "https://github.com/CoReason-AI/coreason_etl_pubmedcentral"
 [tool.ruff]
 line-length = 120
 target-version = "py314"
-
-[tool.deptry.per_rule_ignores]
-DEP002 = ["duckdb"]
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I", "UP", "SIM", "RUF", "ARG", "C4", "PT", "TCH", "FA", "PIE", "RET", "PERF", "FURB", "LOG", "N", "A", "S"]
