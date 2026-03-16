@@ -123,7 +123,7 @@ def test_extract_identity_state_no_pmcid() -> None:
     assert result.pmcid == ""
 
 
-@given(st.text(min_size=1))  # type: ignore[misc]
+@given(st.text(min_size=1))
 def test_article_identity_state_property(pmcid: str) -> None:
     """Property-based test verifying valid inputs using hypothesis."""
     state = ArticleIdentityState(pmcid=pmcid, article_type=ArticleTypeEnum.OTHER)

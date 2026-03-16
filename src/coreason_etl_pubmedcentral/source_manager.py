@@ -63,7 +63,7 @@ class S3Source(BaseSource):
         # Use anonymous access to public bucket
         self.fs = fsspec.filesystem("s3", anon=True)
 
-    @retry(  # type: ignore[misc]
+    @retry(
         retry=retry_if_exception_type((SourceConnectionError, TimeoutError, ConnectionRefusedError)),
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=10),
@@ -104,7 +104,7 @@ class FTPSource(BaseSource):
         self.base_path = base_path.rstrip("/")
         self.fs = fsspec.filesystem("ftp", host=self.host)
 
-    @retry(  # type: ignore[misc]
+    @retry(
         retry=retry_if_exception_type((SourceConnectionError, TimeoutError, ConnectionRefusedError)),
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=10),
