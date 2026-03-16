@@ -136,7 +136,7 @@ class TestS3Source(unittest.TestCase):
         self.mock_fs.get.side_effect = mock_get
 
         # Override retry logic for tests to run faster
-        self.source._download.__func__.retry.stop = stop_after_attempt(1)
+        self.source._download.__func__.retry.stop = stop_after_attempt(1)  # type: ignore[attr-defined]
 
         local_path = self.source.get_file("test.tar.gz")
         assert Path(local_path).exists()
@@ -146,7 +146,7 @@ class TestS3Source(unittest.TestCase):
     def test_download_file_not_found(self) -> None:
         """Test FileNotFoundError is wrapped."""
         self.mock_fs.get.side_effect = FileNotFoundError()
-        self.source._download.__func__.retry.stop = stop_after_attempt(1)
+        self.source._download.__func__.retry.stop = stop_after_attempt(1)  # type: ignore[attr-defined]
 
         with pytest.raises(SourceFileNotFoundError):
             self.source.get_file("test.tar.gz")
@@ -159,7 +159,7 @@ class TestS3Source(unittest.TestCase):
                 pass  # Empty file
 
         self.mock_fs.get.side_effect = mock_get
-        self.source._download.__func__.retry.stop = stop_after_attempt(1)
+        self.source._download.__func__.retry.stop = stop_after_attempt(1)  # type: ignore[attr-defined]
 
         with pytest.raises(SourceZeroByteError):
             self.source.get_file("test.tar.gz")
@@ -167,7 +167,7 @@ class TestS3Source(unittest.TestCase):
     def test_download_connection_error(self) -> None:
         """Test generic Exception is wrapped in SourceConnectionError."""
         self.mock_fs.get.side_effect = Exception("Generic error")
-        self.source._download.__func__.retry.stop = stop_after_attempt(1)
+        self.source._download.__func__.retry.stop = stop_after_attempt(1)  # type: ignore[attr-defined]
 
         with pytest.raises(SourceConnectionError):
             self.source.get_file("test.tar.gz")
@@ -192,7 +192,7 @@ class TestFTPSource(unittest.TestCase):
                 f.write(b"data")
 
         self.mock_fs.get.side_effect = mock_get
-        self.source._download.__func__.retry.stop = stop_after_attempt(1)
+        self.source._download.__func__.retry.stop = stop_after_attempt(1)  # type: ignore[attr-defined]
 
         local_path = self.source.get_file("test.tar.gz")
         assert Path(local_path).exists()
@@ -202,7 +202,7 @@ class TestFTPSource(unittest.TestCase):
     def test_download_file_not_found(self) -> None:
         """Test FileNotFoundError is wrapped."""
         self.mock_fs.get.side_effect = FileNotFoundError()
-        self.source._download.__func__.retry.stop = stop_after_attempt(1)
+        self.source._download.__func__.retry.stop = stop_after_attempt(1)  # type: ignore[attr-defined]
 
         with pytest.raises(SourceFileNotFoundError):
             self.source.get_file("test.tar.gz")
@@ -215,7 +215,7 @@ class TestFTPSource(unittest.TestCase):
                 pass  # Empty file
 
         self.mock_fs.get.side_effect = mock_get
-        self.source._download.__func__.retry.stop = stop_after_attempt(1)
+        self.source._download.__func__.retry.stop = stop_after_attempt(1)  # type: ignore[attr-defined]
 
         with pytest.raises(SourceZeroByteError):
             self.source.get_file("test.tar.gz")
@@ -223,7 +223,7 @@ class TestFTPSource(unittest.TestCase):
     def test_download_connection_error(self) -> None:
         """Test generic Exception is wrapped in SourceConnectionError."""
         self.mock_fs.get.side_effect = Exception("Generic error")
-        self.source._download.__func__.retry.stop = stop_after_attempt(1)
+        self.source._download.__func__.retry.stop = stop_after_attempt(1)  # type: ignore[attr-defined]
 
         with pytest.raises(SourceConnectionError):
             self.source.get_file("test.tar.gz")
