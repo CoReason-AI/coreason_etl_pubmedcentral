@@ -79,7 +79,7 @@ def test_generate_surrogate_keys_identical() -> None:
     assert result[1] == expected_uuid
 
 
-@given(st.lists(st.text(min_size=1), max_size=100))  # type: ignore[misc]
+@given(st.lists(st.text(min_size=1), max_size=100))
 def test_generate_surrogate_keys_hypothesis(pmcid_list: list[str]) -> None:
     """Property-based test verifying different list sizes and strings."""
     pmcids = pl.Series("pmcid", pmcid_list, dtype=pl.String)

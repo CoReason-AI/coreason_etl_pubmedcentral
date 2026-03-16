@@ -153,7 +153,7 @@ def test_extract_funding_state_mixed_missing_modern() -> None:
     assert result.funding[1].grant_id == ""
 
 
-@given(  # type: ignore[misc]
+@given(
     st.lists(
         st.builds(
             FundingEntityState,

@@ -218,7 +218,7 @@ def test_extract_entity_state_aff_no_id() -> None:
     assert result.contributors[0].affs == ["Valid Aff"]
 
 
-@given(st.lists(st.text(min_size=1), min_size=1, max_size=5))  # type: ignore[misc]
+@given(st.lists(st.text(min_size=1), min_size=1, max_size=5))
 def test_contributor_entity_state_property(affs: list[str]) -> None:
     """Property-based test verifying deterministic sorting and assignments."""
     state = ContributorEntityState(name="Prop Author", affs=affs)
