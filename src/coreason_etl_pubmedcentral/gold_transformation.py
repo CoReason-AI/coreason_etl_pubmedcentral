@@ -31,6 +31,7 @@ def _gold_transformer_generator(silver_item: dict[str, Any]) -> Generator[dict[s
         return
 
     # Extract sections
+    identity_data = article.get("identity", {})
     entity_data = article.get("entity", {})
     funding_data = article.get("funding", {})
     temporal_data = article.get("temporal", {})
@@ -39,8 +40,7 @@ def _gold_transformer_generator(silver_item: dict[str, Any]) -> Generator[dict[s
     grant_ids = [f.get("grant_id") for f in funding_data.get("funding", []) if f.get("grant_id")]
     agency_names = [f.get("agency") for f in funding_data.get("funding", []) if f.get("agency")]
 
-    # We do not have keywords in the parsed state right now, but schema requires an array
-    keywords: list[str] = []
+    keywords = identity_data.get("keywords", [])
 
     affiliations_text: list[str] = []
     authors_display_list: list[str] = []
@@ -55,7 +55,7 @@ def _gold_transformer_generator(silver_item: dict[str, Any]) -> Generator[dict[s
     authors_display = "; ".join(authors_display_list)
 
     # Extract Context
-    journal_name = ""
+    journal_name = identity_data.get("journal_name", "")
 
     pub_year = None
     date_published = temporal_data.get("date_published")
@@ -70,6 +70,9 @@ def _gold_transformer_generator(silver_item: dict[str, Any]) -> Generator[dict[s
     is_retracted = file_metadata.get("retracted", False)
     license_type = file_metadata.get("license", "")
 
+    title = identity_data.get("title", "")
+    abstract = identity_data.get("abstract", "")
+
     yield {
         "coreason_id": silver_item.get("coreason_id"),
         "pmcid": silver_item.get("pmcid"),
@@ -79,8 +82,8 @@ def _gold_transformer_generator(silver_item: dict[str, Any]) -> Generator[dict[s
         "keywords": json.dumps(keywords),
         "affiliations_text": json.dumps(sorted(affiliations_text)),
         # Search
-        "title": "",
-        "abstract": "",
+        "title": title,
+        "abstract": abstract,
         "authors_display": authors_display,
         # Compliance
         "is_commercial_safe": is_commercial_safe,

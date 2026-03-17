@@ -88,7 +88,9 @@ def test_live_pipeline_execution(mock_sm_class: mock.MagicMock, mock_tarball: st
 
         with duckdb.connect(db_path) as conn:
             query = "SELECT count(*) FROM pmc_data.gold_pmc_analytics_rich;"
-            count = conn.execute(query).fetchone()[0]
+            result = conn.execute(query).fetchone()
+            assert result is not None
+            count = result[0]
 
             assert count >= 1
 

@@ -24,10 +24,30 @@ def test_extract_identity_state_all_fields() -> None:
     xml_content = b"""
     <article article-type="research-article">
         <front>
+            <journal-meta>
+                <journal-title-group>
+                    <journal-title>Test Journal</journal-title>
+                </journal-title-group>
+            </journal-meta>
             <article-meta>
                 <article-id pub-id-type="pmc">PMC12345</article-id>
                 <article-id pub-id-type="pmid">67890</article-id>
                 <article-id pub-id-type="doi">10.1234/5678</article-id>
+                <title-group>
+                    <article-title>Test <b>Article</b> Title</article-title>
+                </title-group>
+                <abstract>
+                    <p>This is an <i>abstract</i> with <b>HTML</b>.</p>
+                </abstract>
+                <kwd-group>
+                    <kwd>Keyword 1</kwd>
+                    <kwd>Keyword 2</kwd>
+                </kwd-group>
+                <article-categories>
+                    <subj-group>
+                        <subject>Subject 1</subject>
+                    </subj-group>
+                </article-categories>
             </article-meta>
         </front>
     </article>
@@ -39,6 +59,10 @@ def test_extract_identity_state_all_fields() -> None:
     assert result.pmid == "67890"
     assert result.doi == "10.1234/5678"
     assert result.article_type == ArticleTypeEnum.RESEARCH
+    assert result.title == "Test Article Title"
+    assert result.abstract == "This is an abstract with HTML."
+    assert result.journal_name == "Test Journal"
+    assert result.keywords == ["Keyword 1", "Keyword 2", "Subject 1"]
 
 
 def test_extract_identity_state_missing_fields() -> None:
@@ -59,6 +83,10 @@ def test_extract_identity_state_missing_fields() -> None:
     assert result.pmid is None
     assert result.doi is None
     assert result.article_type == ArticleTypeEnum.OTHER
+    assert result.title == ""
+    assert result.abstract == ""
+    assert result.journal_name == ""
+    assert result.keywords == []
 
 
 def test_extract_identity_state_case_insensitive_pmc() -> None:
@@ -126,9 +154,20 @@ def test_extract_identity_state_no_pmcid() -> None:
 @given(st.text(min_size=1))
 def test_article_identity_state_property(pmcid: str) -> None:
     """Property-based test verifying valid inputs using hypothesis."""
-    state = ArticleIdentityState(pmcid=pmcid, article_type=ArticleTypeEnum.OTHER)
+    state = ArticleIdentityState(
+        pmcid=pmcid,
+        article_type=ArticleTypeEnum.OTHER,
+        title="Test Title",
+        abstract="Test Abstract",
+        journal_name="Test Journal",
+        keywords=["Keyword B", "Keyword A"],
+    )
     assert state.pmcid == pmcid
     assert state.article_type == ArticleTypeEnum.OTHER
+    assert state.title == "Test Title"
+    assert state.abstract == "Test Abstract"
+    assert state.journal_name == "Test Journal"
+    assert state.keywords == ["Keyword A", "Keyword B"]
 
 
 def test_extract_identity_state_complex_nested_pmc() -> None:
