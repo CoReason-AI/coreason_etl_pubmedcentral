@@ -50,9 +50,12 @@ def _pmc_xml_files_generator(
 
             # In a real scenario, we might want SourceManager to return a tuple (path, source).
             # For simplicity and given the memory constraints, this is sufficient.
+            logger.info("records_ingested_total", source=ingestion_source, status="success")
 
         except Exception as e:
+            failed_source = "FTP" if source_manager.is_failover_active else "S3"
             logger.error(f"Failed to fetch file {file_path}: {e}")
+            logger.info("records_ingested_total", source=failed_source, status="fail")
             continue
 
         # Validate that local_path and ingestion_source are strings
@@ -60,6 +63,9 @@ def _pmc_xml_files_generator(
             raise TypeError("Expected source_file_path to be a string")
         if not isinstance(ingestion_source, str):
             raise TypeError("Expected ingestion_source to be a string")  # pragma: no cover
+
+        if record.get("retracted"):
+            logger.info(f"RetractionFound - Marking {record['accession_id']} as retracted based on file.")
 
         file_metadata = {
             "accession_id": record["accession_id"],
