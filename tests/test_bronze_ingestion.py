@@ -35,11 +35,13 @@ def mock_incremental() -> mock.MagicMock:
     return incremental
 
 
+@mock.patch("coreason_etl_pubmedcentral.bronze_ingestion.logger")
 @mock.patch("coreason_etl_pubmedcentral.bronze_ingestion.parse_manifest")
 @mock.patch("coreason_etl_pubmedcentral.bronze_ingestion.SourceManager")
 def test_pmc_xml_files_generator_success(
     mock_source_manager_class: mock.MagicMock,
     mock_parse_manifest: mock.MagicMock,
+    mock_logger: mock.MagicMock,
     mock_config: PubMedCentralConfiguration,
     mock_incremental: mock.MagicMock,
 ) -> None:
@@ -73,13 +75,49 @@ def test_pmc_xml_files_generator_success(
     assert record["file_metadata"]["original_file_path"] == "test/path/PMC123.xml.tar.gz"
 
     mock_source_manager.get_file.assert_called_once_with("test/path/PMC123.xml.tar.gz")
+    mock_logger.info.assert_any_call("records_ingested_total", source="S3", status="success")
 
 
+@mock.patch("coreason_etl_pubmedcentral.bronze_ingestion.logger")
+@mock.patch("coreason_etl_pubmedcentral.bronze_ingestion.parse_manifest")
+@mock.patch("coreason_etl_pubmedcentral.bronze_ingestion.SourceManager")
+def test_pmc_xml_files_generator_retraction_found(
+    mock_source_manager_class: mock.MagicMock,
+    mock_parse_manifest: mock.MagicMock,
+    mock_logger: mock.MagicMock,
+    mock_config: PubMedCentralConfiguration,
+    mock_incremental: mock.MagicMock,
+) -> None:
+    """Test verifying RetractionFound log is emitted when retracted is true."""
+    mock_parse_manifest.return_value = [
+        {
+            "file_path": "test/path/PMC123.xml.tar.gz",
+            "accession_id": "PMC123",
+            "last_updated": "2024-01-01 12:00:00",
+            "pmid": 123,
+            "license": "CC-BY",
+            "retracted": True,
+        }
+    ]
+
+    mock_source_manager = mock_source_manager_class.return_value
+    mock_source_manager.get_file.return_value = "/local/temp/path.tar.gz"
+    mock_source_manager.is_failover_active = False
+
+    generator = _pmc_xml_files_generator(mock_config, "manifest.csv", mock_incremental)
+    records = list(generator)
+
+    assert len(records) == 1
+    mock_logger.info.assert_any_call("RetractionFound - Marking PMC123 as retracted based on file.")
+
+
+@mock.patch("coreason_etl_pubmedcentral.bronze_ingestion.logger")
 @mock.patch("coreason_etl_pubmedcentral.bronze_ingestion.parse_manifest")
 @mock.patch("coreason_etl_pubmedcentral.bronze_ingestion.SourceManager")
 def test_pmc_xml_files_generator_failover(
     mock_source_manager_class: mock.MagicMock,
     mock_parse_manifest: mock.MagicMock,
+    mock_logger: mock.MagicMock,
     mock_config: PubMedCentralConfiguration,
     mock_incremental: mock.MagicMock,
 ) -> None:
@@ -104,13 +142,16 @@ def test_pmc_xml_files_generator_failover(
 
     assert len(records) == 1
     assert records[0]["ingestion_source"] == "FTP"
+    mock_logger.info.assert_any_call("records_ingested_total", source="FTP", status="success")
 
 
+@mock.patch("coreason_etl_pubmedcentral.bronze_ingestion.logger")
 @mock.patch("coreason_etl_pubmedcentral.bronze_ingestion.parse_manifest")
 @mock.patch("coreason_etl_pubmedcentral.bronze_ingestion.SourceManager")
 def test_pmc_xml_files_generator_download_failure(
     mock_source_manager_class: mock.MagicMock,
     mock_parse_manifest: mock.MagicMock,
+    mock_logger: mock.MagicMock,
     mock_config: PubMedCentralConfiguration,
     mock_incremental: mock.MagicMock,
 ) -> None:
@@ -128,11 +169,46 @@ def test_pmc_xml_files_generator_download_failure(
 
     mock_source_manager = mock_source_manager_class.return_value
     mock_source_manager.get_file.side_effect = Exception("Download failed")
+    mock_source_manager.is_failover_active = False
 
     generator = _pmc_xml_files_generator(mock_config, "manifest.csv", mock_incremental)
     records = list(generator)
 
     assert len(records) == 0
+    mock_logger.info.assert_any_call("records_ingested_total", source="S3", status="fail")
+
+
+@mock.patch("coreason_etl_pubmedcentral.bronze_ingestion.logger")
+@mock.patch("coreason_etl_pubmedcentral.bronze_ingestion.parse_manifest")
+@mock.patch("coreason_etl_pubmedcentral.bronze_ingestion.SourceManager")
+def test_pmc_xml_files_generator_download_failure_ftp(
+    mock_source_manager_class: mock.MagicMock,
+    mock_parse_manifest: mock.MagicMock,
+    mock_logger: mock.MagicMock,
+    mock_config: PubMedCentralConfiguration,
+    mock_incremental: mock.MagicMock,
+) -> None:
+    """Negative test verifying download failure correctly logs FTP as source when failover is active."""
+    mock_parse_manifest.return_value = [
+        {
+            "file_path": "test/path/PMC123.xml.tar.gz",
+            "accession_id": "PMC123",
+            "last_updated": "2024-01-01 12:00:00",
+            "pmid": 123,
+            "license": "CC-BY",
+            "retracted": False,
+        }
+    ]
+
+    mock_source_manager = mock_source_manager_class.return_value
+    mock_source_manager.get_file.side_effect = Exception("Download failed")
+    mock_source_manager.is_failover_active = True
+
+    generator = _pmc_xml_files_generator(mock_config, "manifest.csv", mock_incremental)
+    records = list(generator)
+
+    assert len(records) == 0
+    mock_logger.info.assert_any_call("records_ingested_total", source="FTP", status="fail")
 
 
 @mock.patch("coreason_etl_pubmedcentral.bronze_ingestion.parse_manifest")
