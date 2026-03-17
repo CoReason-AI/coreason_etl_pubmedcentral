@@ -37,6 +37,16 @@ class ArticleIdentityState(BaseModel):
         default=ArticleTypeEnum.OTHER,
         description="Categorical designation mapped from JATS article-type",
     )
+    title: str = Field(default="", description="Cleaned title text")
+    abstract: str = Field(default="", description="HTML-stripped abstract")
+    journal_name: str = Field(default="", description="Canonical NLM Journal Title")
+    keywords: list[str] = Field(default_factory=list, description="Flattened list from kwd-group and subject")
+
+    @field_validator("keywords")
+    @classmethod
+    def sort_keywords(cls, v: list[str]) -> list[str]:
+        """AGENT INSTRUCTION: Ensure deterministic sorting of keywords."""
+        return sorted(v)
 
 
 class ContributorEntityState(BaseModel):
@@ -151,7 +161,49 @@ def extract_identity_state(root: etree._Element) -> ArticleIdentityState:
             elif raw_type == "case-report":
                 article_type = ArticleTypeEnum.CASE_REPORT
 
-    return ArticleIdentityState(pmcid=pmcid, pmid=pmid, doi=doi, article_type=article_type)
+    # Extract Journal Name
+    journal_name_nodes: Any = root.xpath("//journal-title")
+    journal_name = ""
+    if journal_name_nodes and hasattr(journal_name_nodes, "__getitem__"):
+        node = journal_name_nodes[0]
+        if hasattr(node, "itertext"):
+            journal_name = "".join(str(t) for t in node.itertext()).strip()
+
+    # Extract Title
+    title_nodes: Any = root.xpath("//article-title")
+    title = ""
+    if title_nodes and hasattr(title_nodes, "__getitem__"):
+        node = title_nodes[0]
+        if hasattr(node, "itertext"):
+            title = "".join(str(t) for t in node.itertext()).strip()
+
+    # Extract Abstract
+    abstract_nodes: Any = root.xpath("//abstract")
+    abstract = ""
+    if abstract_nodes and hasattr(abstract_nodes, "__getitem__"):
+        node = abstract_nodes[0]
+        if hasattr(node, "itertext"):
+            abstract = "".join(str(t) for t in node.itertext()).strip()
+
+    # Extract Keywords
+    keywords_nodes: Any = root.xpath("//kwd-group//kwd/text() | //subj-group//subject/text()")
+    keywords: list[str] = []
+    if keywords_nodes and hasattr(keywords_nodes, "__iter__"):
+        for k_node in keywords_nodes:
+            k_text = str(k_node).strip()
+            if k_text:
+                keywords.append(k_text)
+
+    return ArticleIdentityState(
+        pmcid=pmcid,
+        pmid=pmid,
+        doi=doi,
+        article_type=article_type,
+        title=title,
+        abstract=abstract,
+        journal_name=journal_name,
+        keywords=keywords,
+    )
 
 
 def _parse_date_element(date_node: Any) -> str | None:

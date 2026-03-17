@@ -21,7 +21,13 @@ def test_gold_transformation_success() -> None:
         "source_file_path": "oa_comm/xml/all/PMC12345.xml.tar.gz",
         "file_metadata": {"retracted": True, "license": "CC-BY"},
         "article": {
-            "identity": {"pmcid": "12345"},
+            "identity": {
+                "pmcid": "12345",
+                "title": "Test Title",
+                "abstract": "Test Abstract",
+                "journal_name": "Test Journal",
+                "keywords": ["Keyword A", "Keyword B"],
+            },
             "temporal": {"date_published": "2024-01-01"},
             "entity": {
                 "contributors": [
@@ -51,14 +57,16 @@ def test_gold_transformation_success() -> None:
     assert json.loads(record["grant_ids"]) == sorted(["G123", "N456"])
     assert json.loads(record["agency_names"]) == sorted(["NIH", "NSF"])
     assert json.loads(record["affiliations_text"]) == sorted(["Aff 1", "Aff 2", "Aff 3"])
-    assert json.loads(record["keywords"]) == []
+    assert json.loads(record["keywords"]) == ["Keyword A", "Keyword B"]
 
     assert record["authors_display"] == "Doe J; Smith A"
     assert record["is_commercial_safe"] is True
     assert record["is_retracted"] is True
     assert record["license_type"] == "CC-BY"
     assert record["pub_year"] == 2024
-    assert record["journal_name"] == ""
+    assert record["journal_name"] == "Test Journal"
+    assert record["title"] == "Test Title"
+    assert record["abstract"] == "Test Abstract"
 
 
 def test_gold_transformation_missing_fields() -> None:
