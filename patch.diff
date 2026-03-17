@@ -1,0 +1,41 @@
+<<<<<<< SEARCH
+    # Strategy 2: Legacy JATS (article-meta)
+    # AGENT INSTRUCTION: Legacy funding extraction generates independent ArticleFunding objects
+    # for contract-num and contract-sponsor elements when they appear as siblings without grouping,
+    # prioritizing data preservation over unsafe heuristic merging.
+    contract_nums: Any = root.xpath("//article-meta//contract-num")
+    if contract_nums and hasattr(contract_nums, "__iter__"):
+        for num in contract_nums:
+            num_text = "".join(str(t) for t in num.itertext()).strip()
+            if num_text:
+                funding.append(FundingEntityState(agency="", grant_id=num_text))
+
+    contract_sponsors: Any = root.xpath("//article-meta//contract-sponsor")
+    if contract_sponsors and hasattr(contract_sponsors, "__iter__"):
+        for sponsor in contract_sponsors:
+            sponsor_text = "".join(str(t) for t in sponsor.itertext()).strip()
+            if sponsor_text:
+                funding.append(FundingEntityState(agency=sponsor_text, grant_id=""))
+
+    return ArticleFundingState(funding=funding)
+=======
+    # Strategy 2: Legacy JATS (article-meta)
+    # AGENT INSTRUCTION: Legacy JATS extracts from //article-meta/contract-num and contract-sponsor.
+    # Coalesce both into a standardized [{agency, grant_id}] structure.
+    contract_nums: Any = root.xpath("//article-meta//contract-num")
+    contract_sponsors: Any = root.xpath("//article-meta//contract-sponsor")
+
+    agency_text = ""
+    grant_id_text = ""
+
+    if contract_sponsors and hasattr(contract_sponsors, "__iter__"):
+        agency_text = " ".join("".join(str(t) for t in s.itertext()).strip() for s in contract_sponsors).strip()
+
+    if contract_nums and hasattr(contract_nums, "__iter__"):
+        grant_id_text = " ".join("".join(str(t) for t in n.itertext()).strip() for n in contract_nums).strip()
+
+    if agency_text or grant_id_text:
+        funding.append(FundingEntityState(agency=agency_text, grant_id=grant_id_text))
+
+    return ArticleFundingState(funding=funding)
+>>>>>>> REPLACE
