@@ -26,7 +26,7 @@ def run_pipeline(manifest_path: str) -> None:
     """
     logger.info(f"Running pipeline with manifest: {manifest_path}")
 
-    pipeline = dlt.pipeline(pipeline_name="pmc_pipeline", destination="duckdb", dataset_name="pmc_data")
+    pipeline = dlt.pipeline(pipeline_name="pmc_pipeline", destination="postgres", dataset_name="pmc_data")
 
     # Medallion Architecture Data Flow:
     # 1. pmc_xml_files reads manifest and yields Bronze records.

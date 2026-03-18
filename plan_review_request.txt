@@ -1,18 +1,16 @@
-**Comprehensive Analysis**
-The user wants to incrementally build an ETL pipeline for PubMed Central data. The existing codebase implements source fetching (S3/FTP), XML parsing (JATS to epistemic states), surrogate key generation, and basic configuration.
+Ah! The `dummy` destination has these config defaults: `fail_schema_update: bool = False, fail_prob: float = 0.0, retry_prob: float = 0.0, completed_prob: float = 0.0, exception_prob: float = 0.0, timeout: float = 10.0, fail_terminally_in_init: bool = False, fail_transiently_in_init: bool = False`.
+Wait! If `fail_prob: float = 0.0` and `exception_prob: float = 0.0`, why did it say `failed due to timeout`?
+Ah, if `completed_prob = 0.0`, it never completes!!
+It keeps returning `pending` until it hits `timeout` (10s), then it fails with `timeout`!
+So I need `completed_prob=1.0`!
 
-**Decomposition and Planning (Pending Work)**
-1. **Manifest Parser (Bronze Layer):** Create a component using DuckDB (`read_csv`) to parse the PMC manifest CSVs, implementing the High-Water Mark (delta) update mechanism based on `last_updated` and extracting the `retracted` status.
-2. **Bronze Layer Ingestion Resource:** Create a `dlt` resource that yields records to the `bronze_pmc_file` table containing `source_file_path`, `ingestion_ts`, `ingestion_source`, and `file_metadata`. It must validate that `source_file_path` and `ingestion_source` are strings, and it must stream tarballs to local storage (not storing XML payloads in Postgres).
-3. **Silver Layer Transformer:** Create a `dlt` transformer to process files from the Bronze layer using `stream_tarball_xmls`, and apply `generate_surrogate_keys` for `coreason_id`.
-4. **Gold Layer Transformer:** Create a `dlt` transformer to denormalize the `ParsedArticleState` into the `gold_pmc_analytics_rich` wide table, fulfilling the dlt schema explosion prevention (either `max_table_nesting=0` on pipeline or JSON dumps).
-5. **Main Pipeline Orchestration:** Integrate the sources, transformers, and configuration into `main.py` using `dlt.pipeline()`, and implement the live integration tests.
+Let me configure dlt to use dummy with `completed_prob=1.0`.
+In `tests/integration/test_live_pipeline.py`:
+```python
+    os.environ["DESTINATION__NAME"] = "dummy"
+    os.environ["PMC_PIPELINE__DESTINATION"] = "dummy"
+    os.environ["DESTINATION__DUMMY__COMPLETED_PROB"] = "1.0"
+```
+Or I can mock `dlt.pipeline` to use `destination=dlt.destinations.dummy(completed_prob=1.0)`.
 
-**Selected Atomic Unit**
-**Step 1: Manifest Parser (Bronze Layer)**
-- I will implement a new module `src/coreason_etl_pubmedcentral/manifest_parser.py`.
-- It will use DuckDB to parse the manifest CSV.
-- It will accept a `manifest_path` and a `last_updated_watermark` timestamp.
-- It will filter files modified *after* the `last_updated_watermark` using `try_strptime` for robust date handling.
-- It will return an iterator/generator of dictionaries containing `file_path`, `accession_id`, `last_updated`, `pmid`, `license`, and `retracted`.
-- I will write comprehensive unit tests in `tests/test_manifest_parser.py`.
+Let's change `mock_pipeline` in the test!
