@@ -12,9 +12,7 @@ import datetime
 import os
 import tempfile
 from collections.abc import Generator
-from unittest import mock
 
-import duckdb
 import pytest
 
 from coreason_etl_pubmedcentral.manifest_parser import parse_manifest
@@ -59,7 +57,7 @@ def test_parse_manifest_no_watermark(mock_manifest_file: str) -> None:
     assert records[0]["file_path"] == "oa_comm/xml/all/PMC1234567.xml.tar.gz"
     assert records[0]["accession_id"] == "PMC1234567"
     assert records[0]["last_updated"] == "2024-01-01 12:00:00"
-    assert records[0]["pmid"] == 12345
+    assert records[0]["pmid"] == "12345"
     assert records[0]["license"] == "CC-BY"
     assert records[0]["retracted"] is False
 
@@ -95,42 +93,14 @@ def test_parse_manifest_empty_file(mock_empty_manifest_file: str) -> None:
     assert len(records) == 0
 
 
-def test_parse_manifest_duckdb_error() -> None:
-    """Negative test verifying handling of DuckDB query execution errors (e.g., file not found)."""
-    with pytest.raises(duckdb.Error):
+def test_parse_manifest_error() -> None:
+    """Negative test verifying handling of file errors (e.g., file not found)."""
+    with pytest.raises(FileNotFoundError):
         list(parse_manifest("non_existent_file.csv"))
 
 
-def test_parse_manifest_boolean_retracted() -> None:
-    """Test when DuckDB auto-detects 'Retracted' as a boolean type."""
-    # Write a quick temp file with proper headers and 'true'/'false' values
-    fd, path = tempfile.mkstemp(suffix=".csv")
-    content = MOCK_CSV_HEADER + "file1,cite,PMC1,2024-01-01 12:00:00,123,CC-BY,true\n"
-    content += "file2,cite,PMC2,2024-01-01 12:00:00,123,CC-BY,false\n"
-    with os.fdopen(fd, "w") as f:
-        f.write(content)
-
-    records = list(parse_manifest(path))
-    os.remove(path)
-
-    assert len(records) == 2
-    assert records[0]["retracted"] is True
-    assert records[1]["retracted"] is False
-
-
-@mock.patch("duckdb.connect")
-def test_parse_manifest_duckdb_mock_error(mock_connect: mock.MagicMock) -> None:
-    """Negative test verifying handling of DuckDB query execution errors from DB level."""
-    mock_conn = mock.MagicMock()
-    mock_conn.execute.side_effect = duckdb.Error("Mock error")
-    mock_connect.return_value.__enter__.return_value = mock_conn
-
-    with pytest.raises(duckdb.Error):
-        list(parse_manifest("fake_file.csv"))
-
-
 def test_parse_manifest_none_retracted() -> None:
-    """Test when DuckDB returns None or empty string for retracted flag."""
+    """Test when retracted flag is empty."""
     fd, path = tempfile.mkstemp(suffix=".csv")
     content = MOCK_CSV_HEADER + "file1,cite,PMC1,2024-01-01 12:00:00,123,CC-BY,\n"
     with os.fdopen(fd, "w") as f:
@@ -144,7 +114,7 @@ def test_parse_manifest_none_retracted() -> None:
 
 
 def test_parse_manifest_non_yes_retracted() -> None:
-    """Test when DuckDB returns a string for retracted flag that is not 'yes'."""
+    """Test when string for retracted flag is not 'yes'."""
     fd, path = tempfile.mkstemp(suffix=".csv")
     content = MOCK_CSV_HEADER + "file1,cite,PMC1,2024-01-01 12:00:00,123,CC-BY,unknown\n"
     with os.fdopen(fd, "w") as f:
@@ -158,7 +128,7 @@ def test_parse_manifest_non_yes_retracted() -> None:
 
 
 def test_parse_manifest_str_yes_retracted() -> None:
-    """Test when DuckDB returns a string for retracted flag that is 'yes' but with different case or space."""
+    """Test when string for retracted flag is 'yes' but with different case or space."""
     fd, path = tempfile.mkstemp(suffix=".csv")
     content = MOCK_CSV_HEADER + "file1,cite,PMC1,2024-01-01 12:00:00,123,CC-BY, YES \n"
     with os.fdopen(fd, "w") as f:
@@ -169,3 +139,34 @@ def test_parse_manifest_str_yes_retracted() -> None:
 
     assert len(records) == 1
     assert records[0]["retracted"] is True
+
+
+def test_parse_manifest_malformed_date() -> None:
+    """Test that malformed dates are gracefully skipped when watermark is applied."""
+    fd, path = tempfile.mkstemp(suffix=".csv")
+    content = MOCK_CSV_HEADER + "file1,cite,PMC1,bad-date,123,CC-BY,no\n"
+    content += "file2,cite,PMC2,2024-01-02 12:00:00,124,CC-BY,yes\n"
+    with os.fdopen(fd, "w") as f:
+        f.write(content)
+
+    watermark = datetime.datetime(2024, 1, 1, 0, 0, 0)
+    records = list(parse_manifest(path, last_updated_watermark=watermark))
+    os.remove(path)
+
+    assert len(records) == 1
+    assert records[0]["accession_id"] == "PMC2"
+    assert records[0]["retracted"] is True
+
+
+def test_parse_manifest_empty_pmid() -> None:
+    """Test that empty PMID results in None."""
+    fd, path = tempfile.mkstemp(suffix=".csv")
+    content = MOCK_CSV_HEADER + "file1,cite,PMC1,2024-01-01 12:00:00,  ,CC-BY,no\n"
+    with os.fdopen(fd, "w") as f:
+        f.write(content)
+
+    records = list(parse_manifest(path))
+    os.remove(path)
+
+    assert len(records) == 1
+    assert records[0]["pmid"] is None
