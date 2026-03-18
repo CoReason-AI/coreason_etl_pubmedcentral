@@ -16,6 +16,6 @@ __version__ = "0.1.0"
 __author__ = "Akshaya M"
 __email__ = "akshaya.movvar@coreason.ai"
 
-from coreason_etl_pubmedcentral.main import cli, run_pipeline
+from .main import hello_world
 
-__all__ = ["cli", "run_pipeline"]
+__all__ = ["hello_world"]

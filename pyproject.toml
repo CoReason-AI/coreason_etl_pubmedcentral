@@ -88,3 +88,6 @@ asyncio_mode = "auto"
 
 [tool.coverage.run]
 omit = ["tests/*"]
+
+[tool.deptry.per_rule_ignores]
+DEP002 = ["dlt", "fsspec", "lxml", "polars", "pydantic", "tenacity"]
