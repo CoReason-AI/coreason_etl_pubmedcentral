@@ -51,7 +51,7 @@ def test_extract_funding_state_modern_jats() -> None:
 
 
 def test_extract_funding_state_legacy_jats() -> None:
-    """Positive test for legacy JATS funding extraction, independent sibling nodes."""
+    """Positive test for legacy JATS funding extraction, coalescing sibling nodes."""
     xml_content = b"""
     <article>
         <front>
@@ -66,15 +66,9 @@ def test_extract_funding_state_legacy_jats() -> None:
     root = etree.fromstring(xml_content)
     result = extract_funding_state(root)
 
-    assert len(result.funding) == 3
-    # Sorting order: agency then grant_id
-    # ("", "ABC-123"), ("", "XYZ-789"), ("Department of Defense", "")
-    assert result.funding[0].agency == ""
-    assert result.funding[0].grant_id == "ABC-123"
-    assert result.funding[1].agency == ""
-    assert result.funding[1].grant_id == "XYZ-789"
-    assert result.funding[2].agency == "Department of Defense"
-    assert result.funding[2].grant_id == ""
+    assert len(result.funding) == 1
+    assert result.funding[0].agency == "Department of Defense"
+    assert result.funding[0].grant_id == "ABC-123 XYZ-789"
 
 
 def test_extract_funding_state_empty_nodes() -> None:
