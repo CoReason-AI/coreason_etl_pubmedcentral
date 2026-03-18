@@ -27,6 +27,18 @@ def generate_surrogate_keys(pmcids: pl.Series) -> pl.Series:
     Returns:
         pl.Series: A Polars Series containing the generated deterministic UUIDv5 strings.
     """
-    return pmcids.map_elements(
-        lambda x: str(uuid.uuid5(PMC_NAMESPACE, str(x))) if x is not None else None, return_dtype=pl.String
+    # map_batches is an Expr method, so we must use select() or to_frame().select()
+    # to apply it to a Series, then extract the Series back out.
+    return (
+        pmcids.to_frame()
+        .select(
+            pl.col(pmcids.name).map_batches(
+                lambda s: pl.Series(
+                    [str(uuid.uuid5(PMC_NAMESPACE, str(x))) if x is not None else None for x in s],
+                    dtype=pl.String,
+                ),
+                return_dtype=pl.String,
+            )
+        )
+        .to_series()
     )
