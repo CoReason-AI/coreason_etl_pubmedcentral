@@ -46,7 +46,7 @@ def test_run_pipeline(
     run_pipeline("test_manifest.csv")
 
     mock_dlt_pipeline.assert_called_once_with(
-        pipeline_name="pmc_pipeline", destination="duckdb", dataset_name="pmc_data"
+        pipeline_name="pmc_pipeline", destination="postgres", dataset_name="pmc_data"
     )
 
     mock_pmc_bronze.assert_called_once_with(manifest_path="test_manifest.csv")

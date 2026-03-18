@@ -8,11 +8,10 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
+import csv
 import datetime
 from collections.abc import Generator
 from typing import Any
-
-import duckdb
 
 from coreason_etl_pubmedcentral.utils.logger import logger
 
@@ -21,7 +20,7 @@ def parse_manifest(
     manifest_path: str, last_updated_watermark: datetime.datetime | None = None
 ) -> Generator[dict[str, Any]]:
     """
-    AGENT INSTRUCTION: Uses DuckDB to parse the PMC filelist CSV.
+    AGENT INSTRUCTION: Uses standard Python to parse the PMC filelist CSV.
     Implements High-Water Mark (Delta) logic by filtering out rows with
     LastUpdated before the watermark.
 
@@ -29,52 +28,44 @@ def parse_manifest(
     """
     logger.info(f"Parsing manifest: {manifest_path} with watermark: {last_updated_watermark}")
 
-    with duckdb.connect() as con:
-        # We use standard SQL read_csv with auto-detection but specify types to be safe
-        query = """
-            SELECT
-                "File" AS file_path,
-                "Accession ID" AS accession_id,
-                "Last Updated (YYYY-MM-DD HH:MM:SS)" AS last_updated_str,
-                "PMID" AS pmid,
-                "License" AS license_type,
-                "Retracted" AS retracted_str
-            FROM read_csv(
-                ?,
-                header=True,
-                auto_detect=True,
-                types={'Last Updated (YYYY-MM-DD HH:MM:SS)': 'VARCHAR'}
-            )
-        """
+    try:
+        with open(manifest_path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                file_path = row.get("File", "")
+                accession_id = row.get("Accession ID", "")
+                last_updated_str = row.get("Last Updated (YYYY-MM-DD HH:MM:SS)", "")
+                pmid_str = row.get("PMID", "")
+                license_type = row.get("License", "")
+                retracted_str = row.get("Retracted", "")
 
-        args: list[Any] = [manifest_path]
+                # High-Water Mark (Delta) Logic
+                if last_updated_watermark and last_updated_str:
+                    try:
+                        row_date = datetime.datetime.strptime(last_updated_str, "%Y-%m-%d %H:%M:%S")
+                        if row_date <= last_updated_watermark:
+                            continue
+                    except ValueError:
+                        # If date parsing fails, skip the row based on robust date handling requirement
+                        logger.warning(f"Failed to parse date for {accession_id}: {last_updated_str}")
+                        continue
 
-        if last_updated_watermark:
-            watermark_str = last_updated_watermark.strftime("%Y-%m-%d %H:%M:%S")
-            query += " WHERE try_strptime(\"Last Updated (YYYY-MM-DD HH:MM:SS)\", '%Y-%m-%d %H:%M:%S') > ?"
-            args.append(watermark_str)
+                # Handle retracted status
+                is_retracted = False
+                if retracted_str and isinstance(retracted_str, str) and retracted_str.strip().lower() == "yes":
+                    is_retracted = True
 
-        try:
-            result = con.execute(query, args).fetchall()
-        except duckdb.Error as e:
-            logger.error(f"DuckDB error executing manifest query: {e}")
-            raise
+                # Handle PMID string parsing explicitly
+                pmid = pmid_str.strip() if pmid_str and pmid_str.strip() else None
 
-        for row in result:
-            file_path, accession_id, last_updated_str, pmid, license_type, retracted_str = row
-
-            is_retracted = False
-            # DuckDB might return a boolean if auto_detect inferred it, handle both string and bool
-            if isinstance(retracted_str, bool):
-                is_retracted = retracted_str
-            elif retracted_str and isinstance(retracted_str, str) and retracted_str.strip().lower() == "yes":
-                is_retracted = True
-
-            yield {
-                "file_path": file_path,
-                "accession_id": accession_id,
-                "last_updated": last_updated_str,
-                "pmid": pmid,
-                "license": license_type,
-                "retracted": is_retracted,
-            }
+                yield {
+                    "file_path": file_path,
+                    "accession_id": accession_id,
+                    "last_updated": last_updated_str,
+                    "pmid": pmid,
+                    "license": license_type,
+                    "retracted": is_retracted,
+                }
+    except Exception as e:
+        logger.error(f"Error parsing manifest file: {e}")
+        raise
