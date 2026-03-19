@@ -16,8 +16,23 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from coreason_etl_pubmedcentral.models.contracts import CognitiveArticleTypeContract
-from coreason_etl_pubmedcentral.models.manifests import CognitiveGoldManifest, EpistemicBronzeManifest
+from coreason_etl_pubmedcentral.models.manifests import (
+    CognitiveGoldManifest,
+    EpistemicBronzeManifest,
+    EpistemicSilverManifest,
+)
 from coreason_etl_pubmedcentral.models.topology import CognitiveIdentityTopology
+
+
+def test_epistemic_silver_manifest() -> None:
+    """Test the instantiation of EpistemicSilverManifest."""
+    manifest = EpistemicSilverManifest(
+        pmcid="12345",
+        coreason_id="dummy-uuid",
+        raw_payload={"test_key": "test_val"},
+    )
+    assert manifest.pmcid == "12345"
+    assert manifest.raw_payload["test_key"] == "test_val"
 
 
 def test_cognitive_article_type_contract() -> None:

@@ -17,10 +17,24 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_valid
 from coreason_etl_pubmedcentral.models.contracts import CognitiveArticleTypeContract
 
 
+class EpistemicSilverManifest(BaseModel):
+    """
+    Schema for the Silver Layer table: `coreason_etl_pubmedcentral_silver_pmc_refined`.
+    Represents intermediate, cleaned, and structurally resolved parsed entities.
+    Table naming strictly adheres to: packagename_schema_filename
+    """
+
+    model_config = ConfigDict(strict=True)
+    pmcid: str = Field(description="Canonical PMC ID.")
+    coreason_id: str = Field(description="Deterministic surrogate key.")
+    raw_payload: dict[str, Any] = Field(description="Intermediate refined JSON payload.")
+
+
 class EpistemicBronzeManifest(BaseModel):
     """
-    Schema for the Bronze Layer table: `bronze_pmc_file`.
+    Schema for the Bronze Layer table: `coreason_etl_pubmedcentral_bronze_pmc_file`.
     Represents the metadata of a raw ingested source file without payload contents.
+    Table naming strictly adheres to: packagename_schema_filename
     """
 
     model_config = ConfigDict(strict=True)
@@ -37,9 +51,10 @@ class EpistemicBronzeManifest(BaseModel):
 
 class CognitiveGoldManifest(BaseModel):
     """
-    Schema for the Gold Layer table: `gold_pmc_analytics_rich`.
+    Schema for the Gold Layer table: `coreason_etl_pubmedcentral_gold_pmc_analytics_rich`.
     Represents the refined "Wide Table" optimized for OLAP.
     Lists are serialized to JSON strings to prevent schema explosion.
+    Table naming strictly adheres to: packagename_schema_filename
     """
 
     model_config = ConfigDict(strict=True)
