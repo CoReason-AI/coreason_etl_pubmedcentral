@@ -127,3 +127,101 @@ def test_cognitive_gold_manifest_hypothesis(grant_list: list[str]) -> None:
 
     expected_sorted = sorted(set(grant_list))
     assert manifest.grant_ids == expected_sorted
+
+
+def test_cognitive_gold_manifest_empty_and_null_fields() -> None:
+    """Test CognitiveGoldManifest handles empty lists, nulls, and missing optional fields."""
+    manifest = CognitiveGoldManifest(
+        pmcid="12345",
+        coreason_id="dummy-uuid",
+        article_type=CognitiveArticleTypeContract.OTHER,
+        date_published="2023-01-01",
+        title="Test Title",
+        abstract="Test Abstract",
+        authors_display="",
+        is_commercial_safe=False,
+        license_type="CC0",
+        journal_name="Test Journal",
+        pub_year=2023,
+    )
+
+    assert manifest.pmid is None
+    assert manifest.doi is None
+    assert manifest.date_received is None
+    assert manifest.date_accepted is None
+    assert manifest.grant_ids == []
+    assert manifest.agency_names == []
+    assert manifest.keywords == []
+    assert manifest.affiliations_text == []
+    assert manifest.authors == []
+
+    dumped = manifest.model_dump()
+    assert dumped["grant_ids"] == "[]"
+    assert dumped["authors"] == "[]"
+
+
+def test_cognitive_gold_manifest_complex_authors() -> None:
+    """Test CognitiveGoldManifest handles complex authors (missing affs, duplicate names/affs)."""
+    manifest = CognitiveGoldManifest(
+        pmcid="12345",
+        coreason_id="dummy-uuid",
+        article_type=CognitiveArticleTypeContract.RESEARCH,
+        date_published="2023-01-01",
+        title="Test Title",
+        abstract="Test Abstract",
+        authors_display="Doe J",
+        is_commercial_safe=True,
+        license_type="CC-BY",
+        journal_name="Test Journal",
+        pub_year=2023,
+        authors=[
+            {"name": "Zebra A", "affs": ["Univ Z", "Univ Z", "Univ Y"]},  # Dupe affs
+            {"name": "Aardvark B"},  # Missing affs
+            {"name": "Zebra A", "affs": ["Univ X"]},  # Dupe name, different aff
+            {"name": "", "affs": ["Univ W"]},  # Empty name
+            {"affs": ["Univ V"]},  # Missing name key entirely
+        ],
+    )
+
+    assert manifest.authors[0].get("name") == ""
+    assert manifest.authors[0].get("affs") == ["Univ W"]
+
+    assert manifest.authors[1].get("name", "") == ""
+    assert manifest.authors[1].get("affs") == ["Univ V"]
+
+    assert manifest.authors[2].get("name") == "Aardvark B"
+    assert "affs" not in manifest.authors[2]
+
+    # Zebra A sorting depends on stability, but we sort by name. Both are Zebra A.
+    zebra_authors = [a for a in manifest.authors if a.get("name") == "Zebra A"]
+    assert len(zebra_authors) == 2
+
+    # Check that duplicated affs are deduplicated and sorted
+    affs_set = {tuple(a.get("affs", [])) for a in zebra_authors}
+    assert ("Univ Y", "Univ Z") in affs_set
+    assert ("Univ X",) in affs_set
+
+
+def test_cognitive_identity_topology_empty_and_duplicate() -> None:
+    """Test CognitiveIdentityTopology handles empty string, empty series, and duplicates."""
+
+    # Empty string should generate a valid but specific UUID
+    empty_key = CognitiveIdentityTopology.generate_surrogate_key("")
+    assert len(empty_key) == 36
+    assert isinstance(empty_key, str)
+
+    # Empty Polars Series
+    empty_series = pl.Series("pmcid", [], dtype=pl.String)
+    keys_empty = CognitiveIdentityTopology.generate_surrogate_keys_vectorized(empty_series)
+    assert len(keys_empty) == 0
+    assert keys_empty.dtype == pl.String
+
+    # Duplicates in Polars Series
+    duplicate_series = pl.Series("pmcid", ["A", "B", "A", "C", "B"])
+    keys_dupe = CognitiveIdentityTopology.generate_surrogate_keys_vectorized(duplicate_series)
+
+    assert len(keys_dupe) == 5
+    assert keys_dupe[0] == keys_dupe[2]
+    assert keys_dupe[1] == keys_dupe[4]
+    assert keys_dupe[0] != keys_dupe[1]
+    assert keys_dupe[3] != keys_dupe[0]
