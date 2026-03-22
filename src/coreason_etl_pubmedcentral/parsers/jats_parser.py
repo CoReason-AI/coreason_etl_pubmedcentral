@@ -40,11 +40,20 @@ class EpistemicJatsParser:
 
         # Handle Article Type
         article_type_str = root.get("article-type", "") if root is not None else ""
-        try:
-            # Map JATS article-type to Enum
-            article_type = CognitiveArticleTypeContract(article_type_str.strip().upper().replace("-", "_"))
-        except ValueError:
-            article_type = CognitiveArticleTypeContract.OTHER
+
+        # Explicit mapping from common JATS article types to the structured Enum
+        article_type_mapping = {
+            "research-article": CognitiveArticleTypeContract.RESEARCH,
+            "review-article": CognitiveArticleTypeContract.REVIEW,
+            "case-report": CognitiveArticleTypeContract.CASE_REPORT,
+            "research": CognitiveArticleTypeContract.RESEARCH,
+            "review": CognitiveArticleTypeContract.REVIEW,
+        }
+
+        article_type = article_type_mapping.get(
+            article_type_str.strip().lower(),
+            CognitiveArticleTypeContract.OTHER
+        )
 
         # Helper to extract text from an element matching an XPath
         def get_id(pub_id_type: str) -> str | None:
