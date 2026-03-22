@@ -45,6 +45,88 @@ class EpistemicJatsParser:
                 return str(first_node.text).strip()
         return None
 
+    _SEASON_MAP: ClassVar[dict[str, str]] = {
+        "spring": "03",
+        "summer": "06",
+        "fall": "09",
+        "winter": "12",
+    }
+
+    @classmethod
+    def _parse_jats_date(cls, node: etree._Element | None) -> str | None:
+        """
+        Parses a JATS <date> or <pub-date> node into an ISO-8601 string (YYYY-MM-DD).
+        - Year is required.
+        - Missing Month/Day default to '01'.
+        - Maps seasons (Spring, Summer, Fall, Winter) to start months.
+        - Strips whitespace.
+        """
+        if node is None:
+            return None  # pragma: no cover
+
+        def _get_text(tag: str) -> str | None:
+            child = node.find(tag)
+            if child is not None and child.text:
+                return str(child.text).strip()
+            return None  # pragma: no cover
+
+        year = _get_text("year")
+        if not year:
+            return None
+
+        month_text = _get_text("month") or "01"
+        month_text_lower = month_text.lower()
+
+        # Handle Seasons
+        if month_text_lower in cls._SEASON_MAP:
+            month = cls._SEASON_MAP[month_text_lower]
+        elif month_text.isdigit():
+            month = month_text.zfill(2)
+        else:
+            # Fallback if unparsable text is in the month tag
+            month = "01"
+
+        day_text = _get_text("day") or "01"
+        day = day_text.zfill(2) if day_text.isdigit() else "01"
+
+        return f"{year}-{month}-{day}"
+
+    @classmethod
+    def _extract_first_matching_date(cls, tree: etree._ElementTree, xpath: str) -> str | None:
+        nodes = tree.xpath(xpath)
+        if isinstance(nodes, list) and nodes:
+            first_node = next(iter(nodes), None)
+            if isinstance(first_node, etree._Element):
+                return cls._parse_jats_date(first_node)
+        return None
+
+    @classmethod
+    def extract_temporal(cls, tree: etree._ElementTree) -> dict[str, str | None]:
+        """
+        Extracts temporal metadata (published, received, accepted dates) using the "Best Date" heuristic.
+
+        Transformation Logic:
+        - date_published: Priority: epub > ppub > pmc-release.
+        - date_received: //history/date[@date-type='received']
+        - date_accepted: //history/date[@date-type='accepted']
+        - Missing month/day defaults to '01'.
+        - Seasons map to integers (Spring->03).
+        """
+        date_published = (
+            cls._extract_first_matching_date(tree, "//pub-date[@pub-type='epub']")
+            or cls._extract_first_matching_date(tree, "//pub-date[@pub-type='ppub']")
+            or cls._extract_first_matching_date(tree, "//pub-date[@pub-type='pmc-release']")
+        )
+
+        date_received = cls._extract_first_matching_date(tree, "//history/date[@date-type='received']")
+        date_accepted = cls._extract_first_matching_date(tree, "//history/date[@date-type='accepted']")
+
+        return {
+            "date_published": date_published,
+            "date_received": date_received,
+            "date_accepted": date_accepted,
+        }
+
     @classmethod
     def extract_identity(cls, tree: etree._ElementTree) -> dict[str, Any]:
         """

@@ -159,3 +159,140 @@ def test_epistemic_jats_parser_extract_identity_missing_article_and_meta() -> No
     assert result["pmid"] is None
     assert result["doi"] is None
     assert result["article_type"] == CognitiveArticleTypeContract.OTHER
+
+
+def test_epistemic_jats_parser_extract_temporal_standard_dates() -> None:
+    """Test extraction of fully populated, standard ISO-like dates."""
+    xml_content = b"""
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <year>2024</year>
+                    <month>12</month>
+                    <day>05</day>
+                </pub-date>
+                <history>
+                    <date date-type="received">
+                        <year>2023</year>
+                        <month>05</month>
+                        <day>12</day>
+                    </date>
+                    <date date-type="accepted">
+                        <year>2024</year>
+                        <month>01</month>
+                        <day>01</day>
+                    </date>
+                </history>
+            </article-meta>
+        </front>
+    </article>
+    """
+    result = EpistemicJatsParser.extract_temporal(_parse_xml(xml_content))
+
+    assert result["date_published"] == "2024-12-05"
+    assert result["date_received"] == "2023-05-12"
+    assert result["date_accepted"] == "2024-01-01"
+
+
+def test_epistemic_jats_parser_extract_temporal_priority() -> None:
+    """Test that epub is prioritized over ppub and pmc-release."""
+    xml_content = b"""
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="pmc-release"><year>2024</year><month>03</month><day>01</day></pub-date>
+                <pub-date pub-type="ppub"><year>2024</year><month>02</month><day>01</day></pub-date>
+                <pub-date pub-type="epub"><year>2024</year><month>01</month><day>01</day></pub-date>
+            </article-meta>
+        </front>
+    </article>
+    """
+    result = EpistemicJatsParser.extract_temporal(_parse_xml(xml_content))
+    assert result["date_published"] == "2024-01-01"
+
+    xml_content_no_epub = b"""
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="pmc-release"><year>2024</year><month>03</month><day>01</day></pub-date>
+                <pub-date pub-type="ppub"><year>2024</year><month>02</month><day>01</day></pub-date>
+            </article-meta>
+        </front>
+    </article>
+    """
+    result_no_epub = EpistemicJatsParser.extract_temporal(_parse_xml(xml_content_no_epub))
+    assert result_no_epub["date_published"] == "2024-02-01"
+
+
+def test_epistemic_jats_parser_extract_temporal_missing_elements_and_seasons() -> None:
+    """Test that missing months/days default to 01, and that seasons map correctly."""
+    xml_content = b"""
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <year>2024</year>
+                    <!-- Missing month and day -->
+                </pub-date>
+                <history>
+                    <date date-type="received">
+                        <year>2023</year>
+                        <month>Spring</month>
+                    </date>
+                    <date date-type="accepted">
+                        <year>2023</year>
+                        <month>Fall</month>
+                        <day>NotADay</day> <!-- Invalid day defaults to 01 -->
+                    </date>
+                </history>
+            </article-meta>
+        </front>
+    </article>
+    """
+    result = EpistemicJatsParser.extract_temporal(_parse_xml(xml_content))
+
+    assert result["date_published"] == "2024-01-01"
+    assert result["date_received"] == "2023-03-01"
+    assert result["date_accepted"] == "2023-09-01"
+
+
+def test_epistemic_jats_parser_extract_temporal_no_year() -> None:
+    """Test that if a year is completely missing, the date fails to parse safely."""
+    xml_content = b"""
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <month>12</month>
+                    <day>05</day>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+    """
+    result = EpistemicJatsParser.extract_temporal(_parse_xml(xml_content))
+
+    assert result["date_published"] is None
+    assert result["date_received"] is None
+    assert result["date_accepted"] is None
+
+
+def test_epistemic_jats_parser_extract_temporal_unparsable_month() -> None:
+    """Test fallback when month string is completely unparsable and not a season."""
+    xml_content = b"""
+    <article>
+        <front>
+            <article-meta>
+                <pub-date pub-type="epub">
+                    <year>2024</year>
+                    <month>WeirdMonthFormat</month>
+                    <day>05</day>
+                </pub-date>
+            </article-meta>
+        </front>
+    </article>
+    """
+    result = EpistemicJatsParser.extract_temporal(_parse_xml(xml_content))
+
+    assert result["date_published"] == "2024-01-05"
