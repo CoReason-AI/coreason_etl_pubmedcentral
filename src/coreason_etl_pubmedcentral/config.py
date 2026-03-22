@@ -32,8 +32,17 @@ class PubMedCentralConfig:
 
     # Pipeline Metadata
     pipeline_name: str = "coreason_etl_pubmedcentral"
-    dataset_name: str = "pmc_refined"
     destination_name: str = "postgres"
+
+    # Medallion Schemas
+    bronze_schema: str = "bronze"
+    silver_schema: str = "silver"
+    gold_schema: str = "gold"
+
+    # Medallion Tables (Convention: packagename_schema_filename)
+    bronze_table: str = "coreason_etl_pubmedcentral_bronze_pmc_file"
+    silver_table: str = "coreason_etl_pubmedcentral_silver_pmc_refined"
+    gold_table: str = "coreason_etl_pubmedcentral_gold_pmc_analytics_rich"
 
     # dlt Schema Explosion Prevention Protocol
     max_table_nesting: int = 0
