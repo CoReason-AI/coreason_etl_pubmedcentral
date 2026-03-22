@@ -8,7 +8,7 @@
 #
 # Source Code: https://github.com/CoReason-AI/coreason_etl_pubmedcentral
 
-from typing import Any
+from typing import Any, ClassVar
 
 from lxml import etree
 
@@ -24,6 +24,26 @@ class EpistemicJatsParser:
     for Identity & Classification. It operates on parsed lxml AST payloads and
     returns dictionaries mapping canonical metadata.
     """
+
+    _ARTICLE_TYPE_MAPPING: ClassVar[dict[str, CognitiveArticleTypeContract]] = {
+        "research-article": CognitiveArticleTypeContract.RESEARCH,
+        "review-article": CognitiveArticleTypeContract.REVIEW,
+        "case-report": CognitiveArticleTypeContract.CASE_REPORT,
+        "research": CognitiveArticleTypeContract.RESEARCH,
+        "review": CognitiveArticleTypeContract.REVIEW,
+    }
+
+    @classmethod
+    def _extract_article_id(cls, tree: etree._ElementTree, pub_id_type: str) -> str | None:
+        """
+        Helper method to extract the stripped text of the first matching article-id element.
+        """
+        nodes = tree.xpath(f"//article-id[@pub-id-type='{pub_id_type}']")
+        if isinstance(nodes, list):
+            first_node = next(iter(nodes), None)
+            if isinstance(first_node, etree._Element) and first_node.text:
+                return str(first_node.text).strip()
+        return None
 
     @classmethod
     def extract_identity(cls, tree: etree._ElementTree) -> dict[str, Any]:
@@ -41,39 +61,20 @@ class EpistemicJatsParser:
         # Handle Article Type
         article_type_str = root.get("article-type", "") if root is not None else ""
 
-        # Explicit mapping from common JATS article types to the structured Enum
-        article_type_mapping = {
-            "research-article": CognitiveArticleTypeContract.RESEARCH,
-            "review-article": CognitiveArticleTypeContract.REVIEW,
-            "case-report": CognitiveArticleTypeContract.CASE_REPORT,
-            "research": CognitiveArticleTypeContract.RESEARCH,
-            "review": CognitiveArticleTypeContract.REVIEW,
-        }
+        article_type = cls._ARTICLE_TYPE_MAPPING.get(
+            article_type_str.strip().lower(), CognitiveArticleTypeContract.OTHER
+        )
 
-        article_type = article_type_mapping.get(article_type_str.strip().lower(), CognitiveArticleTypeContract.OTHER)
-
-        # Helper to extract text from an element matching an XPath
-        def get_id(pub_id_type: str) -> str | None:
-            # Note: lxml uses .xpath() which returns a list
-            nodes = tree.xpath(f"//article-id[@pub-id-type='{pub_id_type}']")
-            if isinstance(nodes, list) and len(nodes) > 0:
-                first_node = nodes[0]
-                # In lxml, Element supports .text, but xpath can return strings/tuples.
-                if isinstance(first_node, etree._Element) and first_node.text:
-                    return str(first_node.text).strip()
-            return None
-
-        pmcid = get_id("pmc")
+        pmcid = cls._extract_article_id(tree, "pmc")
         if pmcid and pmcid.upper().startswith("PMC"):
             pmcid = pmcid[3:]
 
-        # Handle edge case where PMCID is missing (should not happen in valid PMC data, but we must be defensive)
+        # Handle edge case where PMCID is missing
         if not pmcid:
-            # A valid pmcid is required for Silver manifest, but we will return what we find
             pmcid = ""
 
-        pmid = get_id("pmid")
-        doi = get_id("doi")
+        pmid = cls._extract_article_id(tree, "pmid")
+        doi = cls._extract_article_id(tree, "doi")
 
         return {
             "pmcid": pmcid,
