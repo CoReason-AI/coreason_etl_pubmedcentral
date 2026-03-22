@@ -50,10 +50,7 @@ class EpistemicJatsParser:
             "review": CognitiveArticleTypeContract.REVIEW,
         }
 
-        article_type = article_type_mapping.get(
-            article_type_str.strip().lower(),
-            CognitiveArticleTypeContract.OTHER
-        )
+        article_type = article_type_mapping.get(article_type_str.strip().lower(), CognitiveArticleTypeContract.OTHER)
 
         # Helper to extract text from an element matching an XPath
         def get_id(pub_id_type: str) -> str | None:
