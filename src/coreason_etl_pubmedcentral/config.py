@@ -27,6 +27,9 @@ class PubMedCentralConfig:
     ftp_host: str = "ftp.ncbi.nlm.nih.gov"
     ftp_path: str = "/pub/pmc/"
 
+    # Local Storage Mandate
+    local_archive_dir: str = "/var/lib/coreason/pmc/"
+
     # Failover trigger thresholds
     s3_max_retry_attempts: int = 3
 

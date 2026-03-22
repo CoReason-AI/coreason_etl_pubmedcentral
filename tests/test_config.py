@@ -22,6 +22,7 @@ def test_pubmed_central_config_defaults() -> None:
     assert config.ftp_host == "ftp.ncbi.nlm.nih.gov"
     assert config.ftp_path == "/pub/pmc/"
     assert config.s3_max_retry_attempts == 3
+    assert config.local_archive_dir == "/var/lib/coreason/pmc/"
     assert config.pipeline_name == "coreason_etl_pubmedcentral"
     assert config.dataset_name == "pmc_refined"
     assert config.destination_name == "postgres"
@@ -37,19 +38,21 @@ def test_pubmed_central_config_env_overrides() -> None:
         "PUBMED_CENTRAL__FTP_PATH": "/custom/path/",
         "PUBMED_CENTRAL__S3_MAX_RETRY_ATTEMPTS": "10",
         "PUBMED_CENTRAL__MAX_TABLE_NESTING": "2",
+        "PUBMED_CENTRAL__LOCAL_ARCHIVE_DIR": "/custom_temp/custom_archive/",
     }
 
     with patch.dict(os.environ, env_vars, clear=True):
         from dlt.common.configuration.resolve import resolve_configuration
 
         # We resolve it directly since get_config within a test module caches the providers before mock runs
-        config = resolve_configuration(PubMedCentralConfig(), sections=("pubmed_central",))
+        config = resolve_configuration(PubMedCentralConfig(), sections=("pubmed_central",))  # type: ignore[type-var]
 
         assert config.s3_bucket == "custom-bucket"
         assert config.ftp_host == "ftp.custom.com"
         assert config.ftp_path == "/custom/path/"
         assert config.s3_max_retry_attempts == 10
         assert config.max_table_nesting == 2
+        assert config.local_archive_dir == "/custom_temp/custom_archive/"
 
         # Unchanged defaults
         assert config.pipeline_name == "coreason_etl_pubmedcentral"
