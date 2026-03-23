@@ -23,8 +23,13 @@ def test_pubmed_central_config_defaults() -> None:
     assert config.ftp_path == "/pub/pmc/"
     assert config.s3_max_retry_attempts == 3
     assert config.pipeline_name == "coreason_etl_pubmedcentral"
-    assert config.dataset_name == "pmc_refined"
     assert config.destination_name == "postgres"
+    assert config.bronze_schema == "bronze"
+    assert config.silver_schema == "silver"
+    assert config.gold_schema == "gold"
+    assert config.bronze_table == "coreason_etl_pubmedcentral_bronze_pmc_file"
+    assert config.silver_table == "coreason_etl_pubmedcentral_silver_pmc_refined"
+    assert config.gold_table == "coreason_etl_pubmedcentral_gold_pmc_analytics_rich"
     assert config.max_table_nesting == 0
 
 
@@ -53,5 +58,10 @@ def test_pubmed_central_config_env_overrides() -> None:
 
         # Unchanged defaults
         assert config.pipeline_name == "coreason_etl_pubmedcentral"
-        assert config.dataset_name == "pmc_refined"
         assert config.destination_name == "postgres"
+        assert config.bronze_schema == "bronze"
+        assert config.silver_schema == "silver"
+        assert config.gold_schema == "gold"
+        assert config.bronze_table == "coreason_etl_pubmedcentral_bronze_pmc_file"
+        assert config.silver_table == "coreason_etl_pubmedcentral_silver_pmc_refined"
+        assert config.gold_table == "coreason_etl_pubmedcentral_gold_pmc_analytics_rich"
