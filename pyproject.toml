@@ -30,6 +30,7 @@ classifiers = [
 
 [project.scripts]
 pmc-etl = "coreason_etl_pubmedcentral.main:cli"
+pmc-abstracts-etl = "coreason_etl_pubmedabstracts.main:cli"
 
 [dependency-groups]
 dev = [
