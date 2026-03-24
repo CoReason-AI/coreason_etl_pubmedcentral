@@ -58,7 +58,7 @@ def test_get_pubmed_updates_success(updates_config: PubMedAbstractsConfig) -> No
 
     mock_fs.open.side_effect = mock_open_side_effect
 
-    with patch("fsspec.filesystem", return_value=mock_fs):
+    with patch("coreason_etl_pubmedabstracts.utils.ftp_streamer.fsspec.filesystem", return_value=mock_fs):
         resource_generator = get_pubmed_updates(config=updates_config)
         results = list(resource_generator)
 
@@ -76,12 +76,24 @@ def test_get_pubmed_updates_success(updates_config: PubMedAbstractsConfig) -> No
         assert results[0]["raw_data"]["PMID"] == "999"
 
 
+def test_get_pubmed_updates_fs_open_failure(updates_config: PubMedAbstractsConfig) -> None:
+    """Test graceful handling of FTP file stream failures."""
+    mock_fs = MagicMock()
+    mock_fs.ls.return_value = ["/mock/updatefiles/update26n0001.xml.gz"]
+    # Opening the file throws an exception
+    mock_fs.open.side_effect = OSError("Connection Dropped")
+
+    with patch("coreason_etl_pubmedabstracts.utils.ftp_streamer.fsspec.filesystem", return_value=mock_fs):
+        results = list(get_pubmed_updates(config=updates_config))
+        assert len(results) == 0
+
+
 def test_get_pubmed_updates_fs_failure(updates_config: PubMedAbstractsConfig) -> None:
     """Test graceful fallback for empty or failed directory list on updates."""
     mock_fs = MagicMock()
     mock_fs.ls.side_effect = Exception("FTP Timeout")
 
-    with patch("fsspec.filesystem", return_value=mock_fs):
+    with patch("coreason_etl_pubmedabstracts.utils.ftp_streamer.fsspec.filesystem", return_value=mock_fs):
         results = list(get_pubmed_updates(config=updates_config))
         assert len(results) == 0
 
@@ -93,6 +105,6 @@ def test_get_pubmed_updates_no_trailing_slash(updates_config: PubMedAbstractsCon
     mock_fs = MagicMock()
     mock_fs.ls.return_value = []
 
-    with patch("fsspec.filesystem", return_value=mock_fs):
+    with patch("coreason_etl_pubmedabstracts.utils.ftp_streamer.fsspec.filesystem", return_value=mock_fs):
         list(get_pubmed_updates(config=updates_config))
         mock_fs.ls.assert_called_once_with("/mock/updates_no_slash/")

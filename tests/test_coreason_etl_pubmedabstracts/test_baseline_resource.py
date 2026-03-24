@@ -64,7 +64,7 @@ def test_get_pubmed_baseline_success(test_config: PubMedAbstractsConfig) -> None
 
     mock_fs.open.side_effect = mock_open_side_effect
 
-    with patch("fsspec.filesystem", return_value=mock_fs):
+    with patch("coreason_etl_pubmedabstracts.utils.ftp_streamer.fsspec.filesystem", return_value=mock_fs):
         # Instantiate the resource
         resource_generator = get_pubmed_baseline(config=test_config)
 
@@ -89,7 +89,7 @@ def test_get_pubmed_baseline_fs_failure(test_config: PubMedAbstractsConfig) -> N
     mock_fs = MagicMock()
     mock_fs.ls.side_effect = Exception("FTP Connection Refused")
 
-    with patch("fsspec.filesystem", return_value=mock_fs):
+    with patch("coreason_etl_pubmedabstracts.utils.ftp_streamer.fsspec.filesystem", return_value=mock_fs):
         resource_generator = get_pubmed_baseline(config=test_config)
         results = list(resource_generator)
 
@@ -104,6 +104,6 @@ def test_get_pubmed_baseline_no_trailing_slash(test_config: PubMedAbstractsConfi
     mock_fs = MagicMock()
     mock_fs.ls.return_value = []
 
-    with patch("fsspec.filesystem", return_value=mock_fs):
+    with patch("coreason_etl_pubmedabstracts.utils.ftp_streamer.fsspec.filesystem", return_value=mock_fs):
         list(get_pubmed_baseline(config=test_config))
         mock_fs.ls.assert_called_once_with("/mock/no_slash/")
