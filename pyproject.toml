@@ -30,6 +30,7 @@ classifiers = [
 
 [project.scripts]
 pmc-etl = "coreason_etl_pubmedcentral.main:cli"
+pmc-abstracts-etl = "coreason_etl_pubmedabstracts.main:cli"
 
 [dependency-groups]
 dev = [
@@ -53,7 +54,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/coreason_etl_pubmedcentral"]
+packages = ["src/coreason_etl_pubmedcentral", "src/coreason_etl_pubmedabstracts"]
 
 [tool.hatch.version]
 source = "vcs"
