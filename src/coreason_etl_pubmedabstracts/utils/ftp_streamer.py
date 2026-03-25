@@ -12,7 +12,7 @@ import datetime
 import gzip
 from collections.abc import Iterator
 from typing import Any
-
+import io
 import fsspec
 
 from coreason_etl_pubmedabstracts.parsers.xml_parser import EpistemicMedlineParser
@@ -48,7 +48,7 @@ class EpistemicFTPStreamingPolicy:
         base_path = directory_path if directory_path.endswith("/") else f"{directory_path}/"
 
         try:
-            all_files = fs.ls(base_path)
+            all_files = fs.ls(base_path, detail=False)
         except Exception as e:
             # Catch file system connection/listing errors rather than generic Exception
             logger.warning(f"FTP directory listing failed for {base_path}: {e}")
@@ -62,11 +62,17 @@ class EpistemicFTPStreamingPolicy:
 
         for file_path in xml_files:
             file_name = file_path.split("/")[-1]
+            # Force the absolute path to guarantee we don't query the FTP root
+            full_path = f"{base_path}{file_name}"
             ingestion_ts = datetime.datetime.now(datetime.UTC).isoformat()
-
+            
             try:
-                # Open stream, wrap in gzip, and parse
-                with fs.open(file_path, "rb") as stream, gzip.open(stream, "rb") as gz_stream:
+                # 1. Read the compressed payload entirely into memory to close the FTP transfer quickly
+                with fs.open(full_path, "rb") as stream:
+                    compressed_payload = stream.read()
+
+                # 2. Wrap the payload in a BytesIO buffer and stream it to the local parser
+                with gzip.open(io.BytesIO(compressed_payload), "rb") as gz_stream:
                     for parsed_record in EpistemicMedlineParser.execute(gz_stream):
                         yield {
                             "file_name": file_name,
@@ -76,5 +82,6 @@ class EpistemicFTPStreamingPolicy:
                         }
             except Exception as e:
                 # Log fetch failures per file
-                logger.error(f"Failed to fetch or parse file {file_path}: {e}")
+                logger.error(f"Failed to fetch or parse file {full_path}: {e}")
                 continue
+

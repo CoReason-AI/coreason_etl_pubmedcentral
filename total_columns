@@ -1,0 +1,593 @@
+-[ RECORD 1 ]----+--------------------------------------------
+content_hash     | 00594d76ef3f736130ba09ee9a77ae48
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 2 ]----+--------------------------------------------
+content_hash     | 008b25006d43993db1311195e0e31620
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 3 ]----+--------------------------------------------
+content_hash     | 03851ab12c4ead394149b4365d46d56c
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 4 ]----+--------------------------------------------
+content_hash     | 0436e008f927ccc01c5e809fde7b6446
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 5 ]----+--------------------------------------------
+content_hash     | 07ccd14cf7ac3fc5474d0f141c6c475e
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 6 ]----+--------------------------------------------
+content_hash     | 08b1abaeb6c90f24f6ec2bc26bf83ac7
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 7 ]----+--------------------------------------------
+content_hash     | 0bceb04cd6411e833c9ecfc5e987e3bb
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 8 ]----+--------------------------------------------
+content_hash     | 0d69622783114433654fab587ffd9359
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 9 ]----+--------------------------------------------
+content_hash     | 0f47bbd93f114a6ff019e2a7f62f144e
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 10 ]---+--------------------------------------------
+content_hash     | 0fb2d1c82f3b20dfffdfe5b8f0efad25
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 11 ]---+--------------------------------------------
+content_hash     | 0fde7a268cbbc60fdafadce02cb8ee3e
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 12 ]---+--------------------------------------------
+content_hash     | 110485296e87507c09a5f3d5170cad42
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 13 ]---+--------------------------------------------
+content_hash     | 139a0961ebd1a321c867de360f398535
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 14 ]---+--------------------------------------------
+content_hash     | 1948349be76262a192c11fd150d4c983
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 15 ]---+--------------------------------------------
+content_hash     | 1b8dee51b4be63784e4ae39bdeaeaf47
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 16 ]---+--------------------------------------------
+content_hash     | 1ef7870ffd50fdafcc7d6e9b7563a223
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 17 ]---+--------------------------------------------
+content_hash     | 208e25f8aa0213adb8b58709d455cd78
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 18 ]---+--------------------------------------------
+content_hash     | 21b9161c392e8ec9916473c54e242926
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 19 ]---+--------------------------------------------
+content_hash     | 22028c6d537a8542c21398ec51f80904
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 20 ]---+--------------------------------------------
+content_hash     | 2277910897a55cfa834786d18447e900
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 21 ]---+--------------------------------------------
+content_hash     | 24cd85c141d6a96e65885d2a2f16041a
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 22 ]---+--------------------------------------------
+content_hash     | 273dc69c6337f88da3a72669518d518f
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 23 ]---+--------------------------------------------
+content_hash     | 27bf7933d76fb4fea663503dccaed5e7
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 24 ]---+--------------------------------------------
+content_hash     | 27c2db47bfc08de10dcece15f21322bf
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 25 ]---+--------------------------------------------
+content_hash     | 2900435b16884d0ff1a28357b5bb6161
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 26 ]---+--------------------------------------------
+content_hash     | 296ae2cf7c5e17fb7562f25ff8c1cd75
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 27 ]---+--------------------------------------------
+content_hash     | 2c90fdced3c37eb1f92721a90108ddd5
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 28 ]---+--------------------------------------------
+content_hash     | 2f3b11fbeb7afe7660dcdedfb17ae09c
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 29 ]---+--------------------------------------------
+content_hash     | 318ff4f09a49426c6b92eaf638bab25a
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 30 ]---+--------------------------------------------
+content_hash     | 32f2adb8c6b5c1c7a0f27d241ad98ef3
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 31 ]---+--------------------------------------------
+content_hash     | 3317b60072fcee3cdcac06d9b0beeac6
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 32 ]---+--------------------------------------------
+content_hash     | 35d10dc5c7455a3428b30f80aeed4111
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 33 ]---+--------------------------------------------
+content_hash     | 3a93effb46bb2d8906b7c5618f2daedd
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 34 ]---+--------------------------------------------
+content_hash     | 3ace88aa06f174aae964435420d504ea
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 35 ]---+--------------------------------------------
+content_hash     | 3b63237fd891afda5967ded3681c0ece
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 36 ]---+--------------------------------------------
+content_hash     | 40b4860ec9f26154363f7aa56523e87e
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 37 ]---+--------------------------------------------
+content_hash     | 416a13ffaa6a8d13de2303e215e2a3fe
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 38 ]---+--------------------------------------------
+content_hash     | 4722b60e357e99e3572c87b820e41598
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 39 ]---+--------------------------------------------
+content_hash     | 47c81314ea3e150420d64d2136e36ee9
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 40 ]---+--------------------------------------------
+content_hash     | 4861c253c76278ae6d907e82eaf0e566
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 41 ]---+--------------------------------------------
+content_hash     | 4bd2a6d215989fbcf4eb6345dda35ea5
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 42 ]---+--------------------------------------------
+content_hash     | 4d46f69e657cf59fcbf4cb1153f77a2f
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 43 ]---+--------------------------------------------
+content_hash     | 4dea66a057f550dc8545adf60bec85aa
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 44 ]---+--------------------------------------------
+content_hash     | 4ea0d782123e77e9fb062fb3257fc67d
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 45 ]---+--------------------------------------------
+content_hash     | 4fae01e720fd37fcc06cd460d2e0e11a
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 46 ]---+--------------------------------------------
+content_hash     | 5288afb413fa43555f9a92ef10b7006d
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 47 ]---+--------------------------------------------
+content_hash     | 545b072d8f3088bea4a1725406c52b51
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 48 ]---+--------------------------------------------
+content_hash     | 56fb60d28db0189ab9cd0cc6a656dee3
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 49 ]---+--------------------------------------------
+content_hash     | 587a0cf6c528a866405adc619611c16a
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 50 ]---+--------------------------------------------
+content_hash     | 59afafe8f47fa12dc351b4276e17e84c
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 51 ]---+--------------------------------------------
+content_hash     | 5c487620a30098daef42b32c3e037bbe
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 52 ]---+--------------------------------------------
+content_hash     | 5db9dbe9b709a7fbfa8d17708da6aecc
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 53 ]---+--------------------------------------------
+content_hash     | 5f7aa723563dd5d54da08c86a2b896c2
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 54 ]---+--------------------------------------------
+content_hash     | 621c2607e0a796e6b5c84b6fb6498bb2
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 55 ]---+--------------------------------------------
+content_hash     | 62e726f86213176b5cd43cd76f39ffa4
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 56 ]---+--------------------------------------------
+content_hash     | 6308fdd130132757c76667c589c42140
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 57 ]---+--------------------------------------------
+content_hash     | 63d7928900643d32556c7e1e71c79c2f
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 58 ]---+--------------------------------------------
+content_hash     | 63e6fdbab3011386e0bb224962b4d9cd
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 59 ]---+--------------------------------------------
+content_hash     | 6412c44b5a05cb99ab4b2412b44288df
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 60 ]---+--------------------------------------------
+content_hash     | 65b322d03f314fed797d5669cba553c8
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 61 ]---+--------------------------------------------
+content_hash     | 66151e623ca42068b9e8755b6bc29d3c
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 62 ]---+--------------------------------------------
+content_hash     | 6646e4e74f0cfbc7ba066068ceecbeda
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 63 ]---+--------------------------------------------
+content_hash     | 68cf0c5592f00b9672399b2b79e92820
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 64 ]---+--------------------------------------------
+content_hash     | 6a29a87c22ebeb16d4dcb57922b8b3fe
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 65 ]---+--------------------------------------------
+content_hash     | 6a76d81cce8f3bbf907f42e1441bcc0d
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 66 ]---+--------------------------------------------
+content_hash     | 70f004d06845ab418a79c71b2465d734
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 67 ]---+--------------------------------------------
+content_hash     | 71c040b9b61e173139dd1127106744db
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 68 ]---+--------------------------------------------
+content_hash     | 72ad79a9d298ab6d862e70d07b6547c6
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 69 ]---+--------------------------------------------
+content_hash     | 73105faae70a6f44ea03351026c544ed
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 70 ]---+--------------------------------------------
+content_hash     | 73a2d49d26d82b8c27540376c157b5da
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 71 ]---+--------------------------------------------
+content_hash     | 745c7d3345e2d21362647e542c2fdf32
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 72 ]---+--------------------------------------------
+content_hash     | 75bdc575f28277986bfec53a33edaff4
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 73 ]---+--------------------------------------------
+content_hash     | 765ee839615e5d8c9335c654cbe1cd6d
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 74 ]---+--------------------------------------------
+content_hash     | 868df8696d0f85af3d482dc15c138607
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 75 ]---+--------------------------------------------
+content_hash     | 89f72199242d628f7f53aeaf76c19e42
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 76 ]---+--------------------------------------------
+content_hash     | 8b28391badb7eda7abf99f5a1b350efd
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 77 ]---+--------------------------------------------
+content_hash     | 8b3514e5cad9a14060d4c2e25b56250d
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 78 ]---+--------------------------------------------
+content_hash     | 8ec10c6151865d68ae34f0ff23101725
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 79 ]---+--------------------------------------------
+content_hash     | 95a6d6f86b10743024814ef7eb5a5def
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 80 ]---+--------------------------------------------
+content_hash     | 967cc70830edc3e6ed20c1a16a6cd7d1
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 81 ]---+--------------------------------------------
+content_hash     | 972838759fae19c784a7e2591a47343b
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 82 ]---+--------------------------------------------
+content_hash     | 9782e2917f47edcf528f9d9cd3a05fd9
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 83 ]---+--------------------------------------------
+content_hash     | 9925c43c2c471f55d8b731bf6fcff77b
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 84 ]---+--------------------------------------------
+content_hash     | 998fd14382337d561f42a93d83a109ae
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 85 ]---+--------------------------------------------
+content_hash     | 9e501398003fa24c9270a0d88e4a1893
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 86 ]---+--------------------------------------------
+content_hash     | 9f57991cd00c7f51bc36f91ace76ad44
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 87 ]---+--------------------------------------------
+content_hash     | a54f756c2483a4a43991e19e3236df32
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 88 ]---+--------------------------------------------
+content_hash     | a574ff839f799aaf5a1038063d6d0327
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 89 ]---+--------------------------------------------
+content_hash     | a9a15a0de383f4c776ee7605153c52bc
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 90 ]---+--------------------------------------------
+content_hash     | aa98b73a3688c6ecbd2f80ae97c794f5
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 91 ]---+--------------------------------------------
+content_hash     | ab52c6a9a25c4f00a8a9bb9e54c6886b
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 92 ]---+--------------------------------------------
+content_hash     | ab7aaa74621fa7cb80ac843a1925e850
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 93 ]---+--------------------------------------------
+content_hash     | ac5f0bebfbaccad91db0fbab240e8bee
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 94 ]---+--------------------------------------------
+content_hash     | ac6e6fb1f656fad251ea4e317b35288a
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 95 ]---+--------------------------------------------
+content_hash     | acd2155ccc77e56dd8c677b719aee9cf
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 96 ]---+--------------------------------------------
+content_hash     | ae68ca2743d23e748a6653d361c6f2c1
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 97 ]---+--------------------------------------------
+content_hash     | b3bbe07a7a325097026f7fe27f8a45ea
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 98 ]---+--------------------------------------------
+content_hash     | b4fa83f0b9d0623cacb716857c767a61
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 99 ]---+--------------------------------------------
+content_hash     | b821b33dcea2e5e09558303c4e3788f6
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 100 ]--+--------------------------------------------
+content_hash     | b8cb3fabaf2235ca44c5195201bd3504
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 101 ]--+--------------------------------------------
+content_hash     | bb9d6e18ecc5c136fe9c5aed76983b87
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 102 ]--+--------------------------------------------
+content_hash     | bfa36b1ed7854c42830775f8d63cd432
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 103 ]--+--------------------------------------------
+content_hash     | c2cea904ef23f52138726444fe90a683
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 104 ]--+--------------------------------------------
+content_hash     | c3d7e38928a41047a5cfef8b15cfa30f
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 105 ]--+--------------------------------------------
+content_hash     | c51c3b5518ff3f3315a18f5a4b47998d
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 106 ]--+--------------------------------------------
+content_hash     | c5b155df47b46109c12d36dba4bd365f
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 107 ]--+--------------------------------------------
+content_hash     | c8bfdd6e2dbe7bfa0542f7b9c574fb02
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 108 ]--+--------------------------------------------
+content_hash     | c9f7dccc09854bcb20bbd16a6f1d3aa6
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 109 ]--+--------------------------------------------
+content_hash     | ca5ab184f7b0d2791172a3aea8f88e8a
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 110 ]--+--------------------------------------------
+content_hash     | cc9c26dcb91f7fb7fc2a0ae3168a8929
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 111 ]--+--------------------------------------------
+content_hash     | ccd64283149a7796922fe0ff5673ac0d
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 112 ]--+--------------------------------------------
+content_hash     | cf59e68e67a20f29f38b62f7458ace18
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 113 ]--+--------------------------------------------
+content_hash     | cfbb0680e802b82ebd51120efa6bd20a
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 114 ]--+--------------------------------------------
+content_hash     | d0e1417085e4592291b14270092a96e6
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 115 ]--+--------------------------------------------
+content_hash     | d41ec6f7f637704559d53be32389fdfa
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 116 ]--+--------------------------------------------
+content_hash     | d4f67df5cebeddd1cd40d00462ae028d
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 117 ]--+--------------------------------------------
+content_hash     | d821b806e2f90c9b327828978ba26d64
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 118 ]--+--------------------------------------------
+content_hash     | d852f22d99709f844c9b7199fe2ae37d
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 119 ]--+--------------------------------------------
+content_hash     | d869c3dcea37ff3989f5f30de4193296
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 120 ]--+--------------------------------------------
+content_hash     | d951a2f44e1e85b8a4c990be60ec23ab
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 121 ]--+--------------------------------------------
+content_hash     | db860119bb27171e5a37a68a03c2716b
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 122 ]--+--------------------------------------------
+content_hash     | dd219dc27a40b3fe8c340dee558fad1c
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 123 ]--+--------------------------------------------
+content_hash     | dd880a379db676792509bfa391deaabd
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 124 ]--+--------------------------------------------
+content_hash     | df2e18179bb2763fef0fdd2205eeaf58
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 125 ]--+--------------------------------------------
+content_hash     | e0168ac4a65f106d518a89b50b7cc8d0
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 126 ]--+--------------------------------------------
+content_hash     | e0f0442c4934027541bf3556674d76fe
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 127 ]--+--------------------------------------------
+content_hash     | e3fd5fca798f249aed07f67b2230d572
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 128 ]--+--------------------------------------------
+content_hash     | e54ab0df5e6697d772ee82bd51aae0f5
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 129 ]--+--------------------------------------------
+content_hash     | e633cec3e5a7c4ad07b4da8474b5bfb4
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 130 ]--+--------------------------------------------
+content_hash     | e72c24ee9c172a33a31ecc70ff898b4b
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 131 ]--+--------------------------------------------
+content_hash     | e78915d9138e2ef2db8133a2cc16236f
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 132 ]--+--------------------------------------------
+content_hash     | e7be372bc21e8e5b72b222be418507d9
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 133 ]--+--------------------------------------------
+content_hash     | e89eec181de8a6f66aaec6bddcef93fc
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 134 ]--+--------------------------------------------
+content_hash     | e9ad3963814008fc028984f2569de6f7
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 135 ]--+--------------------------------------------
+content_hash     | ec3006ee4995ae680bdb84994c53649e
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 136 ]--+--------------------------------------------
+content_hash     | ed10f4307045a430b65b20e620ef61fb
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 137 ]--+--------------------------------------------
+content_hash     | eda7c51de8d4acadf911f1d392a7e962
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 138 ]--+--------------------------------------------
+content_hash     | edacbe56aee5f1a3dd9d1c0be401d6b0
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 139 ]--+--------------------------------------------
+content_hash     | eee42e475a2e7e6136af672ab75f998e
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 140 ]--+--------------------------------------------
+content_hash     | f4f5b503a73f49465777c40c40c660f9
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 141 ]--+--------------------------------------------
+content_hash     | f4fabdc53fc9cb52046b85920cae4cad
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 142 ]--+--------------------------------------------
+content_hash     | f503c7b085adcdd3ecb0a33326d2ae4a
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 143 ]--+--------------------------------------------
+content_hash     | f740528d50910eb2f80a13f13e0db4a3
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+-[ RECORD 144 ]--+--------------------------------------------
+content_hash     | f7f9a82a67214172c0cf5a3d46afec1c
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 145 ]--+--------------------------------------------
+content_hash     | fa1ed778440a86b9296e5b6a7592aeb1
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 146 ]--+--------------------------------------------
+content_hash     | fab125623d2c5b02a0e99e5654d4975f
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 147 ]--+--------------------------------------------
+content_hash     | fc9c9d5ab22f5b3c83021a6ae39bf9b1
+associated_files | {pubmed26n1336.xml.gz,pubmed26n1335.xml.gz}
+duplicate_count  | 2
+-[ RECORD 148 ]--+--------------------------------------------
+content_hash     | fd18d686418a0c67d1087a429a11c969
+associated_files | {pubmed26n1335.xml.gz,pubmed26n1336.xml.gz}
+duplicate_count  | 2
+

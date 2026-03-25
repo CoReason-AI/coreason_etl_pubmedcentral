@@ -12,7 +12,7 @@ authors = [
     { name = "Akshaya M", email = "akshaya.movvar@coreason.ai" },
 ]
 dependencies = [
-    "dlt>=1.20.0",
+    "dlt[postgres]>=1.20.0",
     "fsspec>=2026.2.0",
     "loguru>=0.7.2",
     "lxml>=6.0.2",
